@@ -1,5 +1,5 @@
 /*
- * pcap2matlab - very simple pcap capture file to Matlab converter
+ * pcap2txt - very simple pcap capture file to TXT converter for use with KISS classification
  * Author: Paweł Foremski <pawel@foremski.pl> 2011
  *
  * Heavily based on pcap2c:
@@ -7,16 +7,12 @@
  * Version 1.0 - June 19th, 2007
  *
  * The source code stinks, feel free to complain and fix.
- *
- * TODO?
- * - support for emitting MAT files
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
-//#include "mex.h"
 
 /**
  * From the Wireshark Wiki, the Libpcap file format is defined as:
@@ -136,7 +132,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "pcap2mat, v. 0.1\n");
 		fprintf(stderr, "Paweł Foremski <pawel@foremski.pl> 2011\n");
 		fprintf(stderr, "Original pcap2c by Vanya A. Sergeev - vsergeev@gmail.com\n\n");
-//		fprintf(stderr, "Usage: %s <libpcap capture file> <MAT output file>\n", argv[0]);
 		fprintf(stderr, "Usage: %s <libpcap capture file>\n", argv[0]);
 		return 1;
 	}
@@ -148,14 +143,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Error opening pcap capture file!\n");
 		return 1;
 	}
-
-	/* Open the MAT file */
-	/*mat_fp = matOpen(argv[2], "w");
-	if (mat_fp == NULL) {
-		perror("fopen");
-		fprintf(stderr, "Error opening MAT output file!\n");
-		return 1;
-	}*/
 
 	/* Seek to the end of the file so we can determine the length */
 	if (fseek(pcap_fp, 0, SEEK_END) != 0) {
@@ -185,9 +172,6 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	printf("%% dump of %s, N=%d\n\n", argv[1], N);
-	printf("pkt = struct;\n");
-
 	/* read packets in loop */
 	next_pos = PCAP_GHEADER_LEN;
 	while (fseek(pcap_fp, next_pos, SEEK_SET) == 0) {
@@ -209,7 +193,7 @@ int main(int argc, char *argv[])
 		fseek(pcap_fp, PCAP_ETHERTYPE_OFFSET, SEEK_CUR);
 		READ2(pkt_type);
 		if (pkt_type != PCAP_IPV4_TYPE) {
-			printf("%% skipping %llu: not IPv4\n", pkt_real_id);
+			fprintf(stderr, "skipping %llu: not IPv4\n", pkt_real_id);
 			continue;
 		}
 
@@ -223,7 +207,7 @@ int main(int argc, char *argv[])
 		fseek(pcap_fp, 8, SEEK_CUR);
 		READ(ip_proto);
 		if (ip_proto != PCAP_TCP_TYPE && ip_proto != PCAP_UDP_TYPE) {
-			printf("%% skipping %llu: not TCP nor UDP\n", pkt_real_id);
+			fprintf(stderr, "skipping %llu: not TCP nor UDP\n", pkt_real_id);
 			continue;
 		}
 
@@ -251,7 +235,7 @@ int main(int argc, char *argv[])
 
 		/* check payload length >= N */
 		if (next_pos - payload_pos < N) {
-			printf("%% skipping %llu: not enough bytes (%d vs %d)\n",
+			fprintf(stderr, "skipping %llu: not enough bytes (%d vs %d)\n",
 				pkt_real_id, next_pos - payload_pos, N);
 			continue;
 		}
@@ -259,26 +243,24 @@ int main(int argc, char *argv[])
 		/* subtract headers from payload length */
 		pkt_real_size -= payload_pos - (cur_pos + PCAP_PHEADER_LEN);
 
-		/* start the packet unsigned char array */
-		printf("pkt(%llu).id = %llu;\n", pkt_id, pkt_id);
-		printf("pkt(%llu).real_id = %llu;\n", pkt_id, pkt_real_id);
-		printf("pkt(%llu).time = %u;\n", pkt_id, pkt_time);
-		printf("pkt(%llu).time_us = %u;\n", pkt_id, pkt_time_us);
-		printf("pkt(%llu).size = %u;\n", pkt_id, pkt_real_size);
-		printf("pkt(%llu).srcip = %u;\n", pkt_id, ip_src);
-		printf("pkt(%llu).dstip = %u;\n", pkt_id, ip_dst);
-		printf("pkt(%llu).srcport = %u;\n", pkt_id, p_src);
-		printf("pkt(%llu).dstport = %u;\n", pkt_id, p_dst);
-		printf("pkt(%llu).tcp = %d;\n", pkt_id, (ip_proto == PCAP_TCP_TYPE));
-		printf("pkt(%llu).tcpseq = %u;\n", pkt_id, (ip_proto == PCAP_TCP_TYPE) ? tcp_seq : 0);
-		printf("pkt(%llu).payload = [ ", pkt_id);
+		printf("%llu ", pkt_id);
+		printf("%llu ", pkt_real_id);
+		printf("%u ", pkt_time);
+		printf("%u ", pkt_time_us);
+		printf("%u ", pkt_real_size);
+		printf("%u ", ip_src);
+		printf("%u ", ip_dst);
+		printf("%u ", p_src);
+		printf("%u ", p_dst);
+		printf("%d ", (ip_proto == PCAP_TCP_TYPE));
+		printf("%u ", (ip_proto == PCAP_TCP_TYPE) ? tcp_seq : 0);
 
 		fseek(pcap_fp, payload_pos, SEEK_SET);
 		for (i = 0; i < N; i++) {
 			READ(c);
-			printf("%d %d ", c, c & 0x0f, c >> 4);
+			printf("%d %d ", c & 0x0f, c >> 4);
 		}
-		printf("];\n\n");
+		printf("\n");
 
 		/* Increment the packet index */
 		pkt_id++;
