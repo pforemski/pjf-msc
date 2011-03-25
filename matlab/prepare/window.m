@@ -16,11 +16,17 @@ timediff(timediff > quantile(timediff, 0.90)) = NaN;
 winfo.avgtimespace = nanmean(timediff);
 winfo.jitter = nanmean(abs(diff(timediff)));
 
+% window duration, bitrate
+winfo.duration = PKT.time(winfo.packets(end)) - PKT.time(winfo.packets(1));
+winfo.bytes = sum(PKT.size(winfo.packets));
+winfo.pps = 1000000 * PKT.C / winfo.duration;
+winfo.kbps = (winfo.bytes * 8000) / winfo.duration;
+
 %
-% make K counters
+% compute KISS signature
 %
-values = reshape(PKT.payload(winfo.packets,:), 1, PKT.C * PKT.G);
-winfo.O = histc(values, 0:PKT.K - 1);
+values = histc(PKT.payload(winfo.packets,:), 0:PKT.K - 1);  % count column-wise
+winfo.signature = sum((values - PKT.E) .^ 2 ./ PKT.E);      % Chi-Square test
 
 % write back to flow info
 if ~isfield(finfo, 'windows')

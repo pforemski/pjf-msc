@@ -1,3 +1,4 @@
-matlab/pcap2mat/pcap2mat
-matlab/pcap2mat/pcap2mat.mexglx
-tmp
+/matlab/pcap2mat/pcap2mat
+/tmp
+/dumps
+*.m~

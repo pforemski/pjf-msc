@@ -1,3 +1,6 @@
+% Group raw packet information into flows
+% For each flow divide packets into windows
+% For each window compute KISS signature + basic info
 function pktinfo = pktinfo(pkts, b, N, C)
 
 global PKT;
@@ -8,6 +11,7 @@ PKT.N = N;                % bytes in packets
 PKT.G = (ceil(8/b) * N);  % number of groups in each packet
 PKT.C = C;                % number of packets in window
 PKT.K = 2 ^ b;            % number of counters in window
+PKT.E = C / 2^b;          % expected number of occurances
 
 % for easier reading
 PKT.id = pkts(:, 1);
