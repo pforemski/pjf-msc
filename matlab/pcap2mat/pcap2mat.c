@@ -249,8 +249,8 @@ int main(int argc, char *argv[])
 		printf("%u ", pkt_time_us);
 		printf("%u ", pkt_real_size);
 		printf("%u ", ip_src);
-		printf("%u ", ip_dst);
 		printf("%u ", p_src);
+		printf("%u ", ip_dst);
 		printf("%u ", p_dst);
 		printf("%d ", (ip_proto == PCAP_TCP_TYPE));
 		printf("%u ", (ip_proto == PCAP_TCP_TYPE) ? tcp_seq : 0);
