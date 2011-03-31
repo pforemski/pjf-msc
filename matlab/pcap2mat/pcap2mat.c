@@ -258,7 +258,7 @@ int main(int argc, char *argv[])
 		fseek(pcap_fp, payload_pos, SEEK_SET);
 		for (i = 0; i < N; i++) {
 			READ(c);
-			printf("%d %d ", c & 0x0f, c >> 4);
+			printf("%d %d ", c >> 4, c & 0x0f);
 		}
 		printf("\n");
 
