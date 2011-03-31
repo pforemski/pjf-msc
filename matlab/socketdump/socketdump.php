@@ -52,9 +52,8 @@ if (!READ_STDIN) {
 	}
 
 	/* start tracer */
-	/* TODO? ignore already opened unix sockets and similar */
 	$proc = proc_open(
-		"strace -fqtttvxx -s 12 -e network,read,write,close $what",
+		"strace -fqtttvxx -s 12 -e network,read,write $what",
 		array(
 			0 => STDIN,
 			1 => STDOUT,
@@ -170,16 +169,6 @@ function parse_socket($pid, $args, $retval, $errno)
 	$I[$fd]["dst"] = makeup_addr($pid, $retval);
 }
 
-/*
-function parse_close($pid, $args, $retval, $errno)
-{
-	global $S;
-	if ($retval < 0 && $errno != "EINPROGRESS") return;
-	$fd = intval($args);
-
-	$S[$fd] = null;
-}*/
-
 /*********/
 
 function parse_bind($pid, $args, $retval, $errno)
@@ -248,8 +237,6 @@ function parse_sendto($pid, $args, $retval, $errno) { return parse_write($pid, $
 function makeup_addr($pid, $fd)
 {
 	return array(ip2long("127.0.0.1"), $fd);
-//		ip2long(sprintf("127.%d.%d.%d", $pid/256, $pid%256, $fd/255 + 1)),
-//		$fd % 65536);
 }
 
 function make_packet($dir, $pid, $fd, $args, $size)
