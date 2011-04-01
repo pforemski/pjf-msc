@@ -57,4 +57,18 @@ for i = 1:size(pkts, 1)
     end
 end
 
-pktinfo = PKT;
+if ~isfield(PKT.flows, 'windows')
+    error('no packet windows - dump too short?')
+end
+
+pktinfo = rmfield(PKT, {'flows' 'flowmap'});
+pktinfo.flows = struct('type', {}, 'ip', {}, 'port', {}, 'windows', {});
+
+% copy only flows having at least one window
+for i = 1:size(PKT.flows, 2)
+    if size(PKT.flows(i).windows, 2) == 0
+        continue
+    end
+    
+    pktinfo.flows(end+1) = rmfield(PKT.flows(i), 'packets');
+end
