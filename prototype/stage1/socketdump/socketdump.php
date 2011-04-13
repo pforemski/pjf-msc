@@ -21,6 +21,7 @@ $P = 5;       /** packets per TCP flow */
 $S = array(); /** socket info */
 $I = array(); /** IP info */
 $T = array(); /** TCP seq info */
+$LABEL = 0;   /** packet label */
 
 /* parse command line */
 while ($argv[1][0] == "-") {
@@ -30,6 +31,13 @@ while ($argv[1][0] == "-") {
 		help();
 	else if ($argv[1] == "-s")
 		define('READ_STDIN', 1);
+	else if ($argv[1] == "-D")
+		define('DNS_MODE', 1);
+	else if ($argv[1] == "-l") {
+		array_shift($argv);
+		$argc--;
+		$LABEL = intval($argv[1]);
+	}
 
 	array_shift($argv);
 	$argc--;
@@ -39,6 +47,8 @@ if (!defined('DEBUG'))
 	define('DEBUG', 0);
 if (!defined('READ_STDIN'))
 	define('READ_STDIN', 0);
+if (!defined('DNS_MODE'))
+	define('DNS_MODE', 0);
 
 if (!READ_STDIN) {
 	if ($argc < 2)
@@ -119,12 +129,22 @@ while ($line = fgets($src)) {
 				if ($pkt["size"] < $N) continue;
 				if ($pkt["tcpseq"] > $P) continue;
 
+				if ($pkt["srcport"] == 53 || $pkt["dstport"] == 53) {
+					/* it is DNS and we dont want it */
+					if (DNS_MODE == 0)
+						continue;
+				} else {
+					/* its not DNS and we want only DNS */
+					if (DNS_MODE == 1)
+						continue;
+				}
+
 				$id++;
 				if (DEBUG) {
 					printf("# %s", $line);
 					printf(
-						"%5d %5d %6d %6d %5d   %15s:%-5u %15s:%-5u   %d %d         %s\n\n",
-						$id, $real_id, $time - $time_base, $time_us,
+						"%d %5d %5d %6d %6d %5d   %15s:%-5u %15s:%-5u   %d %d         %s\n\n",
+						$LABEL, $id, $real_id, $time - $time_base, $time_us,
 						$pkt["size"],
 						long2ip($pkt["srcip"]), $pkt["srcport"],
 						long2ip($pkt["dstip"]), $pkt["dstport"],
@@ -133,8 +153,8 @@ while ($line = fgets($src)) {
 					);
 				} else {
 					printf(
-						"%d %d %d %d %d %u %u %u %u %d %d %s\n",
-						$id, $real_id, $time - $time_base, $time_us,
+						"%d %d %d %d %d %d %u %u %u %u %d %d %s\n",
+						$LABEL, $id, $real_id, $time - $time_base, $time_us,
 						$pkt["size"],
 						$pkt["srcip"], $pkt["srcport"],
 						$pkt["dstip"], $pkt["dstport"],
@@ -317,9 +337,11 @@ function get_addr($args)
 function help()
 {
 	echo "socketdump.php v. 0.1\n";
-	echo "usage: socketdump.php [-dhs] [pid|program...]\n";
+	echo "usage: socketdump.php [OPTIONS] <pid|program...>\n";
 	echo "  -d    generate debug output\n";
 	echo "  -h    help screen\n";
 	echo "  -s    parse stdin instead of running strace\n";
+	echo "  -D    dont ignore DNS and capture only this protocol\n";
+	echo "  -l N  set label to N\n";
 	exit(0);
 }

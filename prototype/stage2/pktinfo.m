@@ -1,7 +1,7 @@
 % Group raw packet information into flows
 % For each flow divide packets into windows
 % For each window compute KISS signature + basic info
-function pktinfo = pktinfo(pkts, b, N, C)
+function pktinfo = pktinfo(pkts, b, N, C, dfl_label)
 
 global PKT;
 
@@ -14,17 +14,23 @@ PKT.K = 2 ^ b;            % number of counters in window
 PKT.E = C / 2^b;          % expected number of occurances
 
 % for easier reading
-PKT.id = pkts(:, 1);
-PKT.real_id = pkts(:, 2);
-PKT.time = pkts(:, 3) * 1000000 + pkts(:, 4);
-PKT.size = pkts(:, 5);
-PKT.srcip = pkts(:, 6);
-PKT.srcport = pkts(:, 7);
-PKT.dstip = pkts(:, 8);
-PKT.dstport = pkts(:, 9);
-PKT.tcp = pkts(:, 10);
-PKT.tcpseq = pkts(:, 11);
-PKT.payload = pkts(:, 12:11 + PKT.G);
+PKT.pktlabel = pkts(:, 1);
+PKT.id = pkts(:, 2);
+PKT.real_id = pkts(:, 3);
+PKT.time = pkts(:, 4) * 1000000 + pkts(:, 5);
+PKT.size = pkts(:, 6);
+PKT.srcip = pkts(:, 7);
+PKT.srcport = pkts(:, 8);
+PKT.dstip = pkts(:, 9);
+PKT.dstport = pkts(:, 10);
+PKT.tcp = pkts(:, 11);
+PKT.tcpseq = pkts(:, 12);
+PKT.payload = pkts(:, 13:12 + PKT.G);
+
+% label
+if PKT.pktlabel == 0
+    PKT.pktlabel = dfl_label;
+end
 
 % flow info
 PKT.flowmap = containers.Map('KeyType', 'char', 'ValueType', 'uint32');
@@ -32,28 +38,12 @@ PKT.flows = [];
 
 % collect packets into flows
 for i = 1:size(pkts, 1)
-    if PKT.tcp(i)
-        [ epid1, epid2 ] = ep_ids(i);
+    ep = epid(i);
 
-        len = size(PKT.flows(epid1).packets, 2) + 1;
-        PKT.flows(epid1).packets(len) = i;
-        if (mod(len, C) == 0)
-            window(epid1);
-        end
-        
-        len = size(PKT.flows(epid2).packets, 2) + 1;
-        PKT.flows(epid2).packets(len) = i;
-        if (mod(len, C) == 0)
-            window(epid2);
-        end
-    else
-        fid = flow_id(i);
-        
-        len = size(PKT.flows(fid).packets, 2) + 1;
-        PKT.flows(fid).packets(len) = i;
-        if (mod(len, C) == 0)
-            window(fid);
-        end
+    len = size(PKT.flows(ep).packets, 2) + 1;
+    PKT.flows(ep).packets(len) = i;
+    if (mod(len, C) == 0)
+        pktwindow(ep);
     end
 end
 
@@ -62,7 +52,7 @@ if ~isfield(PKT.flows, 'windows')
 end
 
 pktinfo = rmfield(PKT, {'flows' 'flowmap'});
-pktinfo.flows = struct('type', {}, 'ip', {}, 'port', {}, 'windows', {});
+pktinfo.flows = struct('ip', {}, 'port', {}, 'windows', {});
 
 % copy only flows having at least one window
 for i = 1:size(PKT.flows, 2)

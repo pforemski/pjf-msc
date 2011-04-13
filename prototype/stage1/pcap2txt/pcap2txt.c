@@ -126,13 +126,14 @@ int main(int argc, char *argv[])
 	int payload_pos;                  /** payload position */
 
 	uint32_t time_base = 0;           /** time of first packet */
+	int label = 0;
 	int c, i;
 
 	if (argc < 2) {
-		fprintf(stderr, "pcap2mat, v. 0.1\n");
+		fprintf(stderr, "pcap2txt, v. 0.1\n");
 		fprintf(stderr, "Paweł Foremski <pawel@foremski.pl> 2011\n");
 		fprintf(stderr, "Original pcap2c by Vanya A. Sergeev - vsergeev@gmail.com\n\n");
-		fprintf(stderr, "Usage: %s <libpcap capture file>\n", argv[0]);
+		fprintf(stderr, "Usage: %s <libpcap capture file> [label=0]\n", argv[0]);
 		return 1;
 	}
 
@@ -143,6 +144,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Error opening pcap capture file!\n");
 		return 1;
 	}
+
+	if (argc > 2)
+		label = atoi(argv[2]);
 
 	/* Seek to the end of the file so we can determine the length */
 	if (fseek(pcap_fp, 0, SEEK_END) != 0) {
@@ -243,6 +247,7 @@ int main(int argc, char *argv[])
 		/* subtract headers from payload length */
 		pkt_real_size -= payload_pos - (cur_pos + PCAP_PHEADER_LEN);
 
+		printf("%d ", label);
 		printf("%llu ", pkt_id);
 		printf("%llu ", pkt_real_id);
 		printf("%u ", pkt_time);
@@ -268,6 +273,9 @@ int main(int argc, char *argv[])
 		if (next_pos >= pcap_len)
 			break;
 	}
+
+	if (pkt_id == 1)
+		fprintf(stderr, "no packets\n");
 
 	return 0;
 }

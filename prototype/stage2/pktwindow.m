@@ -1,8 +1,8 @@
-function wid = window(fid)
+function wid = pktwindow(ep)
 global PKT;
 
 % shortcut to flow info
-finfo = PKT.flows(fid);
+finfo = PKT.flows(ep);
 
 %
 % collect packet info
@@ -35,5 +35,5 @@ else
     wid = size(finfo.windows, 2) + 1;
 end
 
-PKT.flows(fid).windows(wid) = winfo;
-PKT.flows(fid).packets = [];
+PKT.flows(ep).windows(wid) = winfo;
+PKT.flows(ep).packets = [];
