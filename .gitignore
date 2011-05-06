@@ -2,3 +2,6 @@
 /tmp
 /dumps
 *.m~
+/spid/spid
+*.swp
+/datasets/

@@ -1,79 +1,42 @@
 /*
  * spid: Statistical Packet Inspection
- *
- * Paweł Foremski <pawel@foremski.pl> 2011
+ * Copyright (C) 2011 Paweł Foremski <pawel@foremski.pl>
+ * This software is licensed under GNU GPL version 3
  */
 
 #ifndef _SPID_H_
 #define _SPID_H_
 
-#include <stdint.h>
-#include <sys/time.h>
+#include "datastructures.h"
 
-/** Number of packets in classification window */
-#define C 80
+/** Initialize spid
+ * Does initialization of struct spid and contents, parses options and sets up events.
+ *
+ * @param argc       number of elements in argv
+ * @param argv       command-line arguments (may be NULL)
+ * @param so         options to apply before argv (may be NULL)
+ * @retval NULL      failure
+ */
+struct spid *spid_init(int argc, const char *argv[], struct spid_options *so);
 
-/** Max number of packets from single TCP connection */
-#define P 5
+/** Make one iteration of the main spid loop
+ * @retval  0        success
+ * @retval -1        failure, may be temporary
+ * @retval  1        failure, permanent error
+ */
+int spid_loop(struct spid *spid);
 
-/** Number of payload bytes to analyze */
-#define N 12
+/** Announce a spid event
+ * @param code       event code
+ * @param data       opaque data specific to given event
+ * @param delay_ms   delay in miliseconds before delivering the event
+ */
+void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t delay_ms);
 
-/** protocol type */
-enum proto_t {
-	SPC_PROTO_TCP = 1,
-	SPC_PROTO_UDP
-};
-
-/** Traffic source */
-struct source {
-	/** source type */
-	enum type_t {
-		SPC_SOURCE_PCAP = 1,
-		SPC_SOURCE_SNIFF
-	} type;
-
-	/** internal data depending on type */
-	union {
-		struct pcap_t {
-			const char *path;           /** file path */
-		} pcap;
-
-		struct sniff_t {
-			const char *ifname;         /** interface name */
-		} sniff;
-	} as;
-
-	/** associated source label (for learning) */
-	uint8_t label;
-};
-
-/** Represents information extracted from single packet */
-struct pkt {
-	uint8_t payload[N];                 /** payload */
-	struct timeval ts;                  /** timestamp */
-	uint16_t size;                      /** packet size */
-};
-
-/** Represents a single endpoint */
-struct ep {
-	enum proto_t proto;                 /** protocol */
-	uint32_t ip;                        /** IP address */
-	uint16_t port;                      /** port number */
-	struct timeval first;               /** time of first packet */
-	struct timeval last;                /** time of last packet */
-	struct pkt pkt[C];                  /** collected packets */
-
-	uint8_t label;                      /** label for learning (if != 0) */
-	uint8_t verdict;                    /** classifier verdict (if != 0) */
-};
-
-/** Represents a single flow (eg. a TCP connection) */
-struct flow {
-	uint32_t counter;                   /** packet counter */
-	struct timeval last;                /** time of last packet */
-	struct ep *ep1;                     /** one side */
-	struct ep *ep2;                     /** second side */
-};
+/** Subscribe to given spid event
+ * @param code       event code
+ * @param cb         event handler - receives code and data from spid_announce()
+ */
+void spid_subscribe(struct spid *spid, spid_event_t code, spid_event_cb_t *cb);
 
 #endif
