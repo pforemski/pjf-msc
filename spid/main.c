@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 	so.C = SPI_DEFAULT_C;
 	spid = spid_init(&so);
 
-	if (spid_source_add(spid, SPI_SOURCE_SNIFF, 0, "wlan0"))
+	if (spid_source_add(spid, SPI_SOURCE_SNIFF, 0, "wlan0 "))
 		return 1;
 
 	/* TODO: libevent epoll error: Epoll ADD(1) on fd 8 failed */

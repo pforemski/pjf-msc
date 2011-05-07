@@ -5,6 +5,16 @@
  */
 
 #include <pcap.h>
+
+/* for parsing libpcap packets */
+#define __FAVOR_BSD
+#include <net/if.h>
+#include <arpa/inet.h>
+#include <net/ethernet.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+
 #include "spid.h"
 
 static int _pcap_err(pcap_t *pcap, const char *func)
@@ -31,19 +41,115 @@ static int _pcap_add_filter(struct source *source, pcap_t *pcap, const char *fil
 	return 0;
 }
 
-static void _pcap_callback(u_char *arg, const struct pcap_pkthdr *pkthdr, const u_char *pkt)
+static void _parse_new_packet(struct source *source,
+	const struct timeval *tstamp, uint16_t pktlen, uint8_t *msg, uint16_t msglen)
+{
+#define PTROK(ptr, s) ((((uint8_t *) ptr) + (s) - msg) < msglen)
+	struct ether_header *eth;
+	struct ip *ip;
+	uint16_t iplen;
+	struct tcphdr *tcp;
+	struct udphdr *udp;
+	uint8_t *data;
+
+	/* Ethernet */
+	eth = (struct ether_header *) msg;
+	if (!PTROK(eth, sizeof *eth)) {
+		dbg(8, "skipping too short Ethernet frame\n");
+		return;
+	}
+
+	switch (ntohs(eth->ether_type)) {
+		case ETHERTYPE_IP:
+			ip = (struct ip *) (msg + 14);
+			break;
+		case ETHERTYPE_VLAN:
+			ip = (struct ip *) (msg + 18);
+			break;
+		case ETHERTYPE_ARP:
+		case ETHERTYPE_REVARP:
+		case ETHERTYPE_IPV6:
+			return;
+		default:
+			dbg(8, "skipping unknown ether type 0x%04X\n", ntohs(eth->ether_type));
+			return;
+	}
+
+	/* IP */
+	if (!PTROK(ip, sizeof *ip)) {
+		dbg(8, "skipping too short IP packet\n");
+		return;
+	} else if (ip->ip_v != 4) {
+		dbg(8, "skipping IPv%u packet\n", ip->ip_v);
+		return;
+	}
+	iplen = ip->ip_hl * 4;
+
+	/* TCP/UDP */
+	switch (ip->ip_p) {
+		case IPPROTO_TCP:
+			tcp = (struct tcphdr *) (((uint8_t *) ip) + iplen);
+			if (!PTROK(tcp, sizeof *tcp)) {
+				dbg(8, "skipping too short TCP packet\n");
+				return;
+			}
+
+			/* TODO: if its closing TCP, kill the flow and return */
+			// tcp->th_flags + TH_RST, etc.
+
+			data = ((uint8_t *) tcp) + tcp->th_off * 4;
+			break;
+
+		case IPPROTO_UDP:
+			udp = (struct udphdr *) (((uint8_t *) ip) + iplen);
+			if (!PTROK(udp, sizeof *udp)) {
+				dbg(8, "skipping too short UDP packet\n");
+				return;
+			}
+
+			data = ((uint8_t *) ip) + sizeof *udp;
+			break;
+
+		case IPPROTO_ICMP:
+			return;
+		default:
+			dbg(8, "skipping non-TCP/UDP packet, proto=%u\n", ip->ip_p);
+			return;
+	}
+
+	/* payload */
+	if (!PTROK(data, source->spid->options.N)) {
+		dbg(12, "skipping too short packet (need %u bytes of payload)\n",
+			source->spid->options.N);
+		return;
+	}
+
+	dbg(0, "packet from %s to %s\n", inet_ntoa(ip->ip_src), inet_ntoa(ip->ip_dst));
+
+	/* TODO:
+	 * put into spid->flows
+	 * if TCP, check counter < P
+	 * create new struct pkt
+	 * put into spid->eps for both endpoints
+	 * generate new spid event?
+	 */
+}
+
+static void _pcap_callback(u_char *arg, const struct pcap_pkthdr *msginfo, const u_char *msg)
 {
 	struct source *source = (struct source *) arg;
 
-	/* TODO */
-	dbg(0, "new packet! source %d:)\n", source->type);
+	/* NB: assuming Ethernet header starts at msg[0] */
+	_parse_new_packet(source,
+		&msginfo->ts, msginfo->len,
+		(uint8_t *) msg, MIN(msginfo->caplen, msginfo->len));
 }
 
 static inline void _pcap_read(struct source *source, pcap_t *pcap)
 {
 	switch (pcap_dispatch(pcap, SPI_PCAP_MAX, _pcap_callback, (u_char *) source)) {
 		case 0:  /* no packets */
-			/* TODO: should not happen */
+			dbg(1, "should not happen\n");
 			return;
 		case -1: /* error */
 			_pcap_err(pcap, "pcap_dispatch()");
