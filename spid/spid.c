@@ -23,12 +23,6 @@ static void _options_defaults(struct spid *spid)
 	spid->options.C = SPI_DEFAULT_C;
 }
 
-/** Setup options according to command-line */
-static void _options_argv(struct spid *spid, int argc, const char *argv[])
-{
-	/* TODO */
-}
-
 /** Garbage collector */
 static void _gc(int fd, short evtype, void *arg)
 {
@@ -72,7 +66,7 @@ static void _new_spid_event(int fd, short evtype, void *arg)
 
 /*******************************/
 
-struct spid *spid_init(int argc, const char *argv[], struct spid_options *so)
+struct spid *spid_init(struct spid_options *so)
 {
 	int i;
 	mmatic *mm;
@@ -97,8 +91,6 @@ struct spid *spid_init(int argc, const char *argv[], struct spid_options *so)
 	else
 		_options_defaults(spid);
 
-	_options_argv(spid, argc, argv);
-
 	/*
 	 * setup events
 	 */
@@ -106,13 +98,47 @@ struct spid *spid_init(int argc, const char *argv[], struct spid_options *so)
 	/* garbage collector */
 	tv.tv_sec = SPI_GC_INTERVAL;
 	tv.tv_usec = 0;
-	event_add(event_new(spid->eb, -1, EV_PERSIST, _gc, spid), &tv);
-
-	/* TODO: read sources */
+	spid->evgc = event_new(spid->eb, -1, EV_PERSIST, _gc, spid);
+	event_add(spid->evgc, &tv);
 
 	/* TODO: statistics / diagnostics? */
 
 	return spid;
+}
+
+int spid_source_add(struct spid *spid, spid_source_t type, label_t label, const char *args)
+{
+	struct source *source;
+	int (*cb)(struct source *source, const char *args);
+	void (*readcb)(int fd, short evtype, void *arg);
+	int rc;
+
+	source = mmatic_zalloc(spid->mm, sizeof *source);
+	source->spid = spid;
+	source->type = type;
+	source->label = label;
+
+	/* callbacks */
+	switch (type) {
+		case SPI_SOURCE_FILE:
+			cb     = source_file_init;
+			readcb = source_file_read;
+			break;
+		case SPI_SOURCE_SNIFF:
+			cb     = source_sniff_init;
+			readcb = source_sniff_read;
+			break;
+	}
+
+	rc = cb(source, args);
+	if (rc != 0)
+		return rc;
+
+	/* monitor source fd for new packets */
+	source->evread = event_new(spid->eb, source->fd, EV_READ | EV_PERSIST, readcb, source);
+	event_add(source->evread, 0);
+
+	return rc;
 }
 
 int spid_loop(struct spid *spid)

@@ -19,4 +19,16 @@
 /** Garbage collector interval */
 #define SPI_GC_INTERVAL 10
 
+/** pcap snaplen */
+#define SPI_PCAP_SNAPLEN 80
+
+/** pcap read timeout [ms] */
+#define SPI_PCAP_TIMEOUT 10
+
+/** pcap max no of packets read once */
+#define SPI_PCAP_MAX SPI_DEFAULT_C
+
+/** pcap default filter */
+#define SPI_PCAP_DEFAULT_FILTER "tcp or udp"
+
 #endif

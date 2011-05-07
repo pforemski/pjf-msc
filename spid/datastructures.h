@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <sys/time.h>
 #include <libpjf/lib.h>
+#include <pcap.h>
 
 struct spid;
 
@@ -31,6 +32,12 @@ typedef enum {
 	SPI_EVENT_MAX                /* keep it last */
 } spid_event_t;
 
+/** spid traffic source type */
+typedef enum {
+	SPI_SOURCE_FILE = 1,
+	SPI_SOURCE_SNIFF
+} spid_source_t;
+
 /** spid event handler
  * @param spid              spid root
  * @param code              event code
@@ -40,30 +47,30 @@ typedef void spid_event_cb_t(struct spid *spid, spid_event_t code, void *data);
 
 /** Traffic source */
 struct source {
-	/** source type */
-	enum type_t {
-		SPI_SOURCE_PCAP = 1,
-		SPI_SOURCE_SNIFF
-	} type;
+	struct spid *spid;                  /** root node */
+	spid_source_t type;                 /** source type */
+	label_t label;                      /** associated source label (for learning) */
+
+	int fd;                             /** underlying fd to monitor for read() possibility */
+	struct event *evread;               /** fd read event */
 
 	/** internal data depending on type */
 	union {
-		struct source_pcap_t {
+		struct source_file_t {
+			pcap_t *pcap;               /** libpcap handler */
 			const char *path;           /** file path */
-		} pcap;
+		} file;
 
 		struct source_sniff_t {
+			pcap_t *pcap;               /** libpcap handler */
 			const char *ifname;         /** interface name */
 		} sniff;
 	} as;
-
-	/** associated source label (for learning) */
-	label_t label;
 };
 
 /** Represents information extracted from single packet */
 struct pkt {
-	struct source *src;                 /** packet source */
+	struct source *source;              /** packet source */
 	uint8_t *payload;                   /** payload */
 	struct timeval ts;                  /** timestamp */
 	uint16_t size;                      /** packet size */
@@ -131,6 +138,7 @@ struct spid {
 	struct spid_options options;        /** spid options */
 
 	struct event_base *eb;              /** libevent root */
+	struct event *evgc;                 /** garbage collector event */
 	tlist *subscribers[SPI_EVENT_MAX+1];/** subscribers of spid events: list of struct spid_subscriber */
 
 	tlist *sources;                     /** traffic sources: list of struct source */

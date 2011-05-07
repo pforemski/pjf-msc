@@ -12,13 +12,23 @@
 int main(int argc, char *argv[])
 {
 	struct spid *spid;
+	struct spid_options so;
 
 	debug = 10;
-	spid = spid_init(argc, (const char **) argv, NULL);
 
-	while (true) {
-		spid_loop(spid);
-	}
+	so.N = SPI_DEFAULT_N;
+	so.P = SPI_DEFAULT_P;
+	so.C = SPI_DEFAULT_C;
+	spid = spid_init(&so);
+
+	if (spid_source_add(spid, SPI_SOURCE_SNIFF, 0, "wlan0"))
+		return 1;
+
+	/* TODO: libevent epoll error: Epoll ADD(1) on fd 8 failed */
+//	if (spid_source_add(spid, SPI_SOURCE_FILE, 0, "/home/pjf/makro/mgr/dumps/udp/dns2"))
+//		return 1;
+
+	while (spid_loop(spid) == 0);
 
 	return 1;
 }

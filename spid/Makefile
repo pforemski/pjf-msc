@@ -1,5 +1,5 @@
 CFLAGS =
-LDFLAGS = -lpjf -lpcre -levent
+LDFLAGS = -lpjf -lpcre -levent -lpcap
 
 ME=spid
 C_OBJECTS=main.o spid.o source.o ep.o flow.o
