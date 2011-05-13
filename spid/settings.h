@@ -20,7 +20,7 @@
 #define SPI_GC_INTERVAL 10
 
 /** pcap snaplen */
-#define SPI_PCAP_SNAPLEN 80
+#define SPI_PCAP_SNAPLEN 100
 
 /** pcap read timeout [ms] */
 #define SPI_PCAP_TIMEOUT 10

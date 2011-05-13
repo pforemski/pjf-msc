@@ -28,7 +28,7 @@ typedef enum {
 /** spid event
  * Its a special case of an internal event, distinct from events understood as in libevent */
 typedef enum {
-	SPI_EVENT_WINDOW_READY = 1,
+	SPI_EVENT_ENDPOINT_HAS_C_PKTS = 1,
 	SPI_EVENT_MAX                /* keep it last */
 } spid_event_t;
 
@@ -59,6 +59,7 @@ struct source {
 		struct source_file_t {
 			pcap_t *pcap;               /** libpcap handler */
 			const char *path;           /** file path */
+//TODO			struct timeval time;        /** time of last packet */
 		} file;
 
 		struct source_sniff_t {
@@ -72,7 +73,7 @@ struct source {
 struct pkt {
 	struct source *source;              /** packet source */
 	uint8_t *payload;                   /** payload */
-	struct timeval ts;                  /** timestamp */
+	struct timeval *ts;                 /** time of packet (NB: may be from pcap file) */
 	uint16_t size;                      /** packet size */
 };
 
@@ -111,18 +112,16 @@ struct ep {
 	uint32_t ip;                        /** IP address */
 	uint16_t port;                      /** port number */
 
-	tlist *pkt;                         /** collected packets */
+	tlist *pkts;                        /** collected packets */
 	struct verdict *verdict;            /** classifier verdict info */
 };
 
-/** Represents a single flow (eg. a TCP connection) */
+/** Represents a TCP flow */
 struct flow {
 	struct timeval last;                /** time of last packet (for GC) */
-
-	proto_t proto;                      /** protocol */
-	struct ep *ep1;                     /** side with lower ip */
-	struct ep *ep2;                     /** side with higer ip */
 	uint32_t counter;                   /** packet counter */
+	bool fin1;                          /** endpoint 1 sent FIN */
+	bool fin2;                          /** endpoint 2 sent FIN */
 };
 
 /** spid configuration options */

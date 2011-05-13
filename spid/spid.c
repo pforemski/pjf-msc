@@ -151,6 +151,8 @@ void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t de
 	struct spid_event *se;
 	struct timeval tv;
 
+	dbg(0, "TODO event #%u :)\n", code);
+
 	se = mmatic_alloc(spid->mm, sizeof *se);
 	se->spid = spid;
 	se->code = code;

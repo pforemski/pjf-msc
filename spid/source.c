@@ -16,6 +16,8 @@
 #include <netinet/udp.h>
 
 #include "spid.h"
+#include "ep.h"
+#include "flow.h"
 
 static int _pcap_err(pcap_t *pcap, const char *func)
 {
@@ -44,13 +46,16 @@ static int _pcap_add_filter(struct source *source, pcap_t *pcap, const char *fil
 static void _parse_new_packet(struct source *source,
 	const struct timeval *tstamp, uint16_t pktlen, uint8_t *msg, uint16_t msglen)
 {
-#define PTROK(ptr, s) ((((uint8_t *) ptr) + (s) - msg) < msglen)
+#define PTROK(ptr, s) ((((uint8_t *) ptr) + (s) - msg) <= msglen)
 	struct ether_header *eth;
 	struct ip *ip;
 	uint16_t iplen;
 	struct tcphdr *tcp;
 	struct udphdr *udp;
 	uint8_t *data;
+	bool istcp = 0;
+	struct pkt pkt;
+	struct ep *ep;
 
 	/* Ethernet */
 	eth = (struct ether_header *) msg;
@@ -69,6 +74,7 @@ static void _parse_new_packet(struct source *source,
 		case ETHERTYPE_ARP:
 		case ETHERTYPE_REVARP:
 		case ETHERTYPE_IPV6:
+		case 0x888E: /* EAPOL */
 			return;
 		default:
 			dbg(8, "skipping unknown ether type 0x%04X\n", ntohs(eth->ether_type));
@@ -94,8 +100,8 @@ static void _parse_new_packet(struct source *source,
 				return;
 			}
 
-			/* TODO: if its closing TCP, kill the flow and return */
-			// tcp->th_flags + TH_RST, etc.
+			istcp = 1;
+			flow_flags(source->spid, ip, tcp);
 
 			data = ((uint8_t *) tcp) + tcp->th_off * 4;
 			break;
@@ -107,7 +113,7 @@ static void _parse_new_packet(struct source *source,
 				return;
 			}
 
-			data = ((uint8_t *) ip) + sizeof *udp;
+			data = ((uint8_t *) udp) + sizeof *udp;
 			break;
 
 		case IPPROTO_ICMP:
@@ -119,20 +125,41 @@ static void _parse_new_packet(struct source *source,
 
 	/* payload */
 	if (!PTROK(data, source->spid->options.N)) {
-		dbg(12, "skipping too short packet (need %u bytes of payload)\n",
-			source->spid->options.N);
+		dbg(12, "skipping too short packet (need %u bytes of payload, pktlen=%u, msglen=%u)\n",
+			source->spid->options.N, pktlen, msglen);
 		return;
 	}
 
-	dbg(0, "packet from %s to %s\n", inet_ntoa(ip->ip_src), inet_ntoa(ip->ip_dst));
+	if (istcp && flow_count(source->spid, ip, tcp) > source->spid->options.P) {
+		dbg(12, "skipping TCP packet past %u first packets of TCP flow\n",
+			source->spid->options.P);
+		return;
+	}
 
-	/* TODO:
-	 * put into spid->flows
-	 * if TCP, check counter < P
-	 * create new struct pkt
-	 * put into spid->eps for both endpoints
-	 * generate new spid event?
-	 */
+	pkt.source = source;
+	pkt.payload = data;
+	pkt.ts = (struct timeval *) tstamp;
+	pkt.size = pktlen;
+
+	/* TODO: add at one endpoint? */
+
+	/* source endpoint */
+	if (istcp)
+		ep = ep_new_pkt(&pkt, SPI_PROTO_TCP, ip->ip_src.s_addr, tcp->th_sport);
+	else
+		ep = ep_new_pkt(&pkt, SPI_PROTO_UDP, ip->ip_src.s_addr, udp->uh_sport);
+
+	if (ep && tlist_count(ep->pkts) >= source->spid->options.C)
+		spid_announce(source->spid, SPI_EVENT_ENDPOINT_HAS_C_PKTS, ep, 0);
+
+	/* destination endpoint */
+	if (istcp)
+		ep = ep_new_pkt(&pkt, SPI_PROTO_TCP, ip->ip_dst.s_addr, tcp->th_dport);
+	else
+		ep = ep_new_pkt(&pkt, SPI_PROTO_UDP, ip->ip_dst.s_addr, udp->uh_dport);
+
+	if (ep && tlist_count(ep->pkts) >= source->spid->options.C)
+		spid_announce(source->spid, SPI_EVENT_ENDPOINT_HAS_C_PKTS, ep, 0);
 }
 
 static void _pcap_callback(u_char *arg, const struct pcap_pkthdr *msginfo, const u_char *msg)
