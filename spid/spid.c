@@ -14,6 +14,7 @@
 #include "source.h"
 #include "ep.h"
 #include "flow.h"
+#include "kissp.h"
 
 /** Setup default options */
 static void _options_defaults(struct spid *spid)
@@ -138,6 +139,9 @@ int spid_source_add(struct spid *spid, spid_source_t type, label_t label, const 
 	source->evread = event_new(spid->eb, source->fd, EV_READ | EV_PERSIST, readcb, source);
 	event_add(source->evread, 0);
 
+	/* initialize classifier */
+	kissp_init(spid);
+
 	return rc;
 }
 
@@ -151,8 +155,6 @@ void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t de
 	struct spid_event *se;
 	struct timeval tv;
 
-	dbg(0, "TODO event #%u :)\n", code);
-
 	se = mmatic_alloc(spid->mm, sizeof *se);
 	se->spid = spid;
 	se->code = code;
@@ -162,7 +164,7 @@ void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t de
 	tv.tv_usec = (delay_ms % 1000) * 1000;
 
 	/* XXX: queue instead of instant handler call */
-	event_base_once(spid->eb, -1, 0, _new_spid_event, se, &tv);
+	event_base_once(spid->eb, -1, EV_TIMEOUT, _new_spid_event, se, &tv);
 }
 
 void spid_subscribe(struct spid *spid, spid_event_t code, spid_event_cb_t *cb)

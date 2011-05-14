@@ -19,6 +19,9 @@ typedef uint8_t label_t;
 /* keep in sync */
 #define SPI_MAXLABEL 255
 
+/** Endpoint address (ip << 32 | port) */
+typedef uint64_t epaddr_t;
+
 /** Protocol type */
 typedef enum {
 	SPI_PROTO_TCP = 1,
@@ -45,6 +48,8 @@ typedef enum {
  */
 typedef void spid_event_cb_t(struct spid *spid, spid_event_t code, void *data);
 
+/************************************************************************/
+
 /** Traffic source */
 struct source {
 	struct spid *spid;                  /** root node */
@@ -59,7 +64,7 @@ struct source {
 		struct source_file_t {
 			pcap_t *pcap;               /** libpcap handler */
 			const char *path;           /** file path */
-//TODO			struct timeval time;        /** time of last packet */
+			struct timeval time;        /** virtual current time in file (time of last packet or inf.) */
 		} file;
 
 		struct source_sniff_t {
@@ -73,7 +78,7 @@ struct source {
 struct pkt {
 	struct source *source;              /** packet source */
 	uint8_t *payload;                   /** payload */
-	struct timeval *ts;                 /** time of packet (NB: may be from pcap file) */
+	struct timeval ts;                  /** time of packet (NB: may be from pcap file) */
 	uint16_t size;                      /** packet size */
 };
 
@@ -106,22 +111,29 @@ struct verdict {
 /** Represents a single endpoint */
 struct ep {
 	mmatic *mm;                         /** mm for this endpoint */
-	struct timeval last;                /** time of last packet (for GC) */
-
+	struct source *source;              /** source that created this endpoint */
 	proto_t proto;                      /** protocol */
-	uint32_t ip;                        /** IP address */
-	uint16_t port;                      /** port number */
+	epaddr_t epa;                       /** endpoint address */
 
+	struct timeval last;                /** time of last packet (for GC) */
 	tlist *pkts;                        /** collected packets */
+	bool has_C;                         /** true if tlist_count(pkts) >= C */
+
 	struct verdict *verdict;            /** classifier verdict info */
 };
 
-/** Represents a TCP flow */
+/** Represents a flow */
 struct flow {
 	struct timeval last;                /** time of last packet (for GC) */
+
+	struct source *source;              /** source that created this flow */
+	proto_t proto;                      /** flow protocol */
+	epaddr_t epa1;                      /** lower epaddr */
+	epaddr_t epa2;                      /** greater epaddr */
+
 	uint32_t counter;                   /** packet counter */
-	bool fin1;                          /** endpoint 1 sent FIN */
-	bool fin2;                          /** endpoint 2 sent FIN */
+	uint8_t rst;                        /** RST counter */
+	uint8_t fin;                        /** FIN counter */
 };
 
 /** spid configuration options */
@@ -141,8 +153,8 @@ struct spid {
 	tlist *subscribers[SPI_EVENT_MAX+1];/** subscribers of spid events: list of struct spid_subscriber */
 
 	tlist *sources;                     /** traffic sources: list of struct source */
-	thash *eps;                         /** endpoints: struct ep indexed by proto-ip:port */
-	thash *flows;                       /** flows: struct flow indexed by proto-ip1:port1-ip2:port2 where ip1 < ip2 */
+	thash *eps;                         /** endpoints: struct ep indexed by file_fd-proto-ip:port */
+	thash *flows;                       /** flows: struct flow indexed by file_fd-proto-ip1:port1-ip2:port2 where ip1 < ip2 */
 };
 
 /** spid event representation */

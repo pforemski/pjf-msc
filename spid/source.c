@@ -19,6 +19,11 @@
 #include "ep.h"
 #include "flow.h"
 
+#define TCP_EPA_SRC(ip, tcp) (((uint64_t) (ip)->ip_src.s_addr << 16) | ntohs((tcp)->th_sport))
+#define TCP_EPA_DST(ip, tcp) (((uint64_t) (ip)->ip_dst.s_addr << 16) | ntohs((tcp)->th_dport))
+#define UDP_EPA_SRC(ip, tcp) (((uint64_t) (ip)->ip_src.s_addr << 16) | ntohs((udp)->uh_sport))
+#define UDP_EPA_DST(ip, tcp) (((uint64_t) (ip)->ip_dst.s_addr << 16) | ntohs((udp)->uh_dport))
+
 static int _pcap_err(pcap_t *pcap, const char *func)
 {
 	dbg(0, "%s: %s\n", func, pcap_geterr(pcap));
@@ -52,10 +57,11 @@ static void _parse_new_packet(struct source *source,
 	uint16_t iplen;
 	struct tcphdr *tcp;
 	struct udphdr *udp;
+
 	uint8_t *data;
-	bool istcp = 0;
-	struct pkt pkt;
-	struct ep *ep;
+	proto_t proto;
+	epaddr_t epa1, epa2;
+	int flowcount;
 
 	/* Ethernet */
 	eth = (struct ether_header *) msg;
@@ -100,8 +106,12 @@ static void _parse_new_packet(struct source *source,
 				return;
 			}
 
-			istcp = 1;
-			flow_flags(source->spid, ip, tcp);
+			proto = SPI_PROTO_TCP;
+			epa1 = TCP_EPA_SRC(ip, tcp);
+			epa2 = TCP_EPA_DST(ip, tcp);
+
+			/* catch FIN/RST flags ASAP */
+			flow_tcp_flags(source, epa1, epa2, tcp);
 
 			data = ((uint8_t *) tcp) + tcp->th_off * 4;
 			break;
@@ -112,6 +122,10 @@ static void _parse_new_packet(struct source *source,
 				dbg(8, "skipping too short UDP packet\n");
 				return;
 			}
+
+			proto = SPI_PROTO_UDP;
+			epa1 = UDP_EPA_SRC(ip, udp);
+			epa2 = UDP_EPA_DST(ip, udp);
 
 			data = ((uint8_t *) udp) + sizeof *udp;
 			break;
@@ -130,41 +144,27 @@ static void _parse_new_packet(struct source *source,
 		return;
 	}
 
-	if (istcp && flow_count(source->spid, ip, tcp) > source->spid->options.P) {
+	/* packet OK */
+	flowcount = flow_count(source, proto, epa1, epa2, tstamp);
+
+	if (proto == SPI_PROTO_TCP && flowcount > source->spid->options.P) {
 		dbg(12, "skipping TCP packet past %u first packets of TCP flow\n",
 			source->spid->options.P);
 		return;
 	}
 
-	pkt.source = source;
-	pkt.payload = data;
-	pkt.ts = (struct timeval *) tstamp;
-	pkt.size = pktlen;
-
 	/* TODO: add at one endpoint? */
-
-	/* source endpoint */
-	if (istcp)
-		ep = ep_new_pkt(&pkt, SPI_PROTO_TCP, ip->ip_src.s_addr, tcp->th_sport);
-	else
-		ep = ep_new_pkt(&pkt, SPI_PROTO_UDP, ip->ip_src.s_addr, udp->uh_sport);
-
-	if (ep && tlist_count(ep->pkts) >= source->spid->options.C)
-		spid_announce(source->spid, SPI_EVENT_ENDPOINT_HAS_C_PKTS, ep, 0);
-
-	/* destination endpoint */
-	if (istcp)
-		ep = ep_new_pkt(&pkt, SPI_PROTO_TCP, ip->ip_dst.s_addr, tcp->th_dport);
-	else
-		ep = ep_new_pkt(&pkt, SPI_PROTO_UDP, ip->ip_dst.s_addr, udp->uh_dport);
-
-	if (ep && tlist_count(ep->pkts) >= source->spid->options.C)
-		spid_announce(source->spid, SPI_EVENT_ENDPOINT_HAS_C_PKTS, ep, 0);
+	ep_new_pkt(source, proto, epa1, tstamp, data, pktlen);
+	ep_new_pkt(source, proto, epa2, tstamp, data, pktlen);
 }
 
 static void _pcap_callback(u_char *arg, const struct pcap_pkthdr *msginfo, const u_char *msg)
 {
 	struct source *source = (struct source *) arg;
+
+	/* move virtual time forward */
+	if (source->type == SPI_SOURCE_FILE)
+		memcpy(&source->as.file.time, &msginfo->ts, sizeof(struct timeval));
 
 	/* NB: assuming Ethernet header starts at msg[0] */
 	_parse_new_packet(source,
@@ -196,6 +196,7 @@ void source_destroy(struct source *source)
 	mmatic_freeptr(source);
 }
 
+/* TODO: set source->as.file.time to inf. on EOF */
 int source_file_init(struct source *source, const char *args)
 {
 	char errbuf[PCAP_ERRBUF_SIZE];

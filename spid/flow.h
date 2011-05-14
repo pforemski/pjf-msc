@@ -16,12 +16,20 @@ void flow_destroy(struct flow *flow);
 
 /** Interpret TCP flags
  * Look for RST and FIN flags and close matching flow if necessary
- * @param ip          ip header
+ * @param epa1        endpoint 1 address
+ * @param epa2        endpoint 2 address
  * @param tcp         tcp header
  */
-void flow_flags(struct spid *spid, struct ip *ip, struct tcphdr *tcp);
+void flow_tcp_flags(struct source *source, epaddr_t epa1, epaddr_t epa2, struct tcphdr *tcp);
 
-/** Get flow packet counter */
-int flow_count(struct spid *spid, struct ip *ip, struct tcphdr *tcp);
+/** Count flow packet
+ * @param proto       flow protocol
+ * @param epa1        endpoint 1 address
+ * @param epa2        endpoint 2 address
+ * @param ts          packet timestamp
+ * @return            flow packet counter
+ */
+int flow_count(struct source *source, proto_t proto, epaddr_t epa1, epaddr_t epa2,
+	const struct timeval *ts);
 
 #endif
