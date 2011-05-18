@@ -9,7 +9,7 @@
 
 #include "datastructures.h"
 
-/** Close source and destroy memory */
+/** Destroy source memory */
 void source_destroy(struct source *source);
 
 /** Initialize a PCAP file source
@@ -20,6 +20,9 @@ int source_file_init(struct source *source, const char *args);
 
 /** Handle new packets on a PCAP file source */
 void source_file_read(int fd, short evtype, void *arg);
+
+/** Close a file source */
+void source_file_close(struct source *source);
 
 /** Initialize a live pcap sniffer source
  * @param args    interface

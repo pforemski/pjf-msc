@@ -4,6 +4,7 @@
  * This software is licensed under GNU GPL version 3
  */
 
+#include <event2/event.h>
 #include <pcap.h>
 
 /* for parsing libpcap packets */
@@ -15,6 +16,7 @@
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 
+#include "source.h"
 #include "spid.h"
 #include "ep.h"
 #include "flow.h"
@@ -176,7 +178,10 @@ static inline void _pcap_read(struct source *source, pcap_t *pcap)
 {
 	switch (pcap_dispatch(pcap, SPI_PCAP_MAX, _pcap_callback, (u_char *) source)) {
 		case 0:  /* no packets */
-			dbg(1, "should not happen\n");
+			if (source->type == SPI_SOURCE_FILE)
+				source_file_close(source);
+			else
+				dbg(1, "no packets available despite receiving an EV_READ event\n");
 			return;
 		case -1: /* error */
 			_pcap_err(pcap, "pcap_dispatch()");
@@ -187,16 +192,13 @@ static inline void _pcap_read(struct source *source, pcap_t *pcap)
 	}
 }
 
-/******************/
-
 void source_destroy(struct source *source)
 {
-	/* TODO: close files, etc. */
-
 	mmatic_freeptr(source);
 }
 
-/* TODO: set source->as.file.time to inf. on EOF */
+/******/
+
 int source_file_init(struct source *source, const char *args)
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
@@ -229,6 +231,15 @@ void source_file_read(int fd, short evtype, void *arg)
 	struct source *source = arg;
 	_pcap_read(source, source->as.file.pcap);
 }
+
+void source_file_close(struct source *source)
+{
+	event_del(source->evread);
+	pcap_close(source->as.file.pcap);
+	source->as.file.time.tv_sec = -1;  /* = inf */
+}
+
+/******/
 
 int source_sniff_init(struct source *source, const char *args)
 {
