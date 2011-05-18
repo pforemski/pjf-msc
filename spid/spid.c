@@ -7,6 +7,7 @@
 #include <sys/time.h>
 #include <libpjf/lib.h>
 #include <event2/event.h>
+#include <stdlib.h>
 
 #include "settings.h"
 #include "datastructures.h"
@@ -73,6 +74,9 @@ struct spid *spid_init(struct spid_options *so)
 	mmatic *mm;
 	struct spid *spid;
 	struct timeval tv;
+
+	/* avoid epoll as it fails on pcap file fds */
+	putenv("EVENT_NOEPOLL=1");
 
 	/* data structure */
 	mm = mmatic_create();
