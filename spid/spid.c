@@ -35,6 +35,7 @@ static void _gc(int fd, short evtype, void *arg)
 	struct timeval systime;
 	uint32_t now;
 
+	dbg(0, "gc!\n");
 	gettimeofday(&systime, NULL);
 
 	thash_iter_loop(spid->flows, key, flow) {
@@ -56,8 +57,11 @@ static void _gc(int fd, short evtype, void *arg)
 		if (ep->last.tv_sec + SPI_EP_TIMEOUT < now)
 			thash_set(spid->eps, key, NULL);
 	}
+}
 
-	spid->gcflag = false;
+static void _gc_suggested(struct spid *spid, spid_event_t code, void *data)
+{
+	_gc(0, 0, spid);
 }
 
 /** Handler for new spid events */
@@ -67,6 +71,7 @@ static void _new_spid_event(int fd, short evtype, void *arg)
 	struct spid_subscriber *ss;
 
 	tlist_iter_loop(se->spid->subscribers[se->code], ss) {
+		se->spid->pending[se->code] = false;
 		ss->handler(se->spid, se->code, se->data);
 	}
 
@@ -112,6 +117,7 @@ struct spid *spid_init(struct spid_options *so)
 	tv.tv_usec = 0;
 	spid->evgc = event_new(spid->eb, -1, EV_PERSIST, _gc, spid);
 	event_add(spid->evgc, &tv);
+	spid_subscribe(spid, SPI_EVENT_SUGGEST_GC, _gc_suggested);
 
 	/* TODO: statistics / diagnostics? */
 
@@ -166,6 +172,11 @@ void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t de
 	struct spid_event *se;
 	struct timeval tv;
 
+	if (spid->pending[code])
+		return;
+	else
+		spid->pending[code] = true;
+
 	se = mmatic_alloc(spid->mm, sizeof *se);
 	se->spid = spid;
 	se->code = code;
@@ -186,18 +197,6 @@ void spid_subscribe(struct spid *spid, spid_event_t code, spid_event_cb_t *cb)
 	ss->handler = cb;
 
 	tlist_push(spid->subscribers[code], ss);
-}
-
-void spid_gc(struct spid *spid)
-{
-	struct timeval zero = { 0, 0 };
-
-	if (!spid->gcflag) {
-		/* use gcflag flag to aggregate many immediate gc calls into one */
-		spid->gcflag = true;
-
-		event_add(spid->evgc, &zero);
-	}
 }
 
 /*

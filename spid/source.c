@@ -168,11 +168,11 @@ static void _pcap_callback(u_char *arg, const struct pcap_pkthdr *msginfo, const
 	if (source->type == SPI_SOURCE_FILE) {
 		memcpy(&source->as.file.time, &msginfo->ts, sizeof(struct timeval));
 
-		/* call gc each virtual SPI_GC_INTERVAL seconds */
+		/* suggest garbage collector each virtual SPI_GC_INTERVAL seconds */
 		if (source->as.file.gctime.tv_sec == 0) {
 			source->as.file.gctime.tv_sec = source->as.file.time.tv_sec;
 		} else if (source->as.file.gctime.tv_sec + SPI_GC_INTERVAL < source->as.file.time.tv_sec) {
-			spid_gc(source->spid);
+			spid_announce(source->spid, SPI_EVENT_SUGGEST_GC, source, 0);
 			source->as.file.gctime.tv_sec = source->as.file.time.tv_sec;
 		}
 	}
@@ -245,9 +245,9 @@ void source_file_close(struct source *source)
 {
 	event_del(source->evread);
 	pcap_close(source->as.file.pcap);
-	source->as.file.time.tv_sec = -1;  /* = inf */
 
-	spid_gc(source->spid);
+	source->as.file.time.tv_sec = -1;  /* = set virtual "now" to infinity */
+	spid_announce(source->spid, SPI_EVENT_SUGGEST_GC, source, 0);
 }
 
 /******/

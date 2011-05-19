@@ -32,6 +32,7 @@ typedef enum {
  * Its a special case of an internal event, distinct from events understood as in libevent */
 typedef enum {
 	SPI_EVENT_ENDPOINT_HAS_C_PKTS = 1,
+	SPI_EVENT_SUGGEST_GC,
 	SPI_EVENT_MAX                /* keep it last */
 } spid_event_t;
 
@@ -77,7 +78,6 @@ struct source {
 
 /** Represents information extracted from single packet */
 struct pkt {
-	struct source *source;              /** packet source */
 	uint8_t *payload;                   /** payload */
 	struct timeval ts;                  /** time of packet (NB: may be from pcap file) */
 	uint16_t size;                      /** packet size */
@@ -150,10 +150,10 @@ struct spid {
 	struct spid_options options;        /** spid options */
 
 	struct event_base *eb;              /** libevent root */
-	tlist *subscribers[SPI_EVENT_MAX+1];/** subscribers of spid events: list of struct spid_subscriber */
-
 	struct event *evgc;                 /** garbage collector event */
-	bool gcflag;                        /** set to false on each gc run */
+
+	tlist *subscribers[SPI_EVENT_MAX+1];/** subscribers of spid events: list of struct spid_subscriber */
+	bool   pending[SPI_EVENT_MAX+1];    /** pending[i] true if spid event i announced but not handled yet */
 
 	tlist *sources;                     /** traffic sources: list of struct source */
 	thash *eps;                         /** endpoints: struct ep indexed by file_fd-proto-ip:port */

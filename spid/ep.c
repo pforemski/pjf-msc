@@ -49,7 +49,6 @@ struct ep *ep_new_pkt(struct source *source, proto_t proto, epaddr_t epa,
 
 	/* make packet */
 	pkt = mmatic_zalloc(ep->mm, sizeof *pkt);
-	pkt->source = source;
 	pkt->size = size;
 	pkt->payload = mmatic_zalloc(ep->mm, spid->options.N);
 	memcpy(pkt->payload, data, spid->options.N);

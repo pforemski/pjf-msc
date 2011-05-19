@@ -14,12 +14,15 @@ void kissp_init(struct spid *spid)
 	spid_subscribe(spid, SPI_EVENT_ENDPOINT_HAS_C_PKTS, kissp_ep_ready);
 }
 
-/* TODO: check if ep->pkts realy has C pkts */
 void kissp_ep_ready(struct spid *spid, spid_event_t code, void *data)
 {
 	struct ep *ep = data;
 
-	dbg(0, "endpoint %s ready!\n", epa_print(ep->epa));
+	/* just to be sure */
+	if (tlist_count(ep->pkts) < spid->options.C)
+		return;
+
+	dbg(5, "endpoint %s ready!\n", epa_print(ep->epa));
 	tlist_flush(ep->pkts);
 	ep->has_C = false;
 }
