@@ -31,9 +31,9 @@ typedef enum {
 /** spid event
  * Its a special case of an internal event, distinct from events understood as in libevent */
 typedef enum {
-	SPI_EVENT_ENDPOINT_HAS_C_PKTS = 1,
-	SPI_EVENT_SUGGEST_GC,
-	SPI_EVENT_MAX                /* keep it last */
+	SPI_EVENT_ENDPOINT_HAS_C_PKTS = 1,  /* arg = struct ep* */
+	SPI_EVENT_SUGGEST_GC,               /* arg = NULL */
+	SPI_EVENT_MAX                       /* keep it last */
 } spid_event_t;
 
 /** spid traffic source type */
@@ -156,8 +156,8 @@ struct spid {
 	bool   pending[SPI_EVENT_MAX+1];    /** pending[i] true if spid event i announced but not handled yet */
 
 	tlist *sources;                     /** traffic sources: list of struct source */
-	thash *eps;                         /** endpoints: struct ep indexed by file_fd-proto-ip:port */
-	thash *flows;                       /** flows: struct flow indexed by file_fd-proto-ip1:port1-ip2:port2 where ip1 < ip2 */
+	thash *eps;                         /** endpoints: struct ep indexed by file_fd-proto-epa */
+	thash *flows;                       /** flows: struct flow indexed by file_fd-proto-epa1-epa2 where epa1 < epa2 */
 };
 
 /** spid event representation */

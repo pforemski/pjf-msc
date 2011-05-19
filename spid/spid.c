@@ -35,7 +35,6 @@ static void _gc(int fd, short evtype, void *arg)
 	struct timeval systime;
 	uint32_t now;
 
-	dbg(0, "gc!\n");
 	gettimeofday(&systime, NULL);
 
 	thash_iter_loop(spid->flows, key, flow) {
@@ -119,6 +118,8 @@ struct spid *spid_init(struct spid_options *so)
 	event_add(spid->evgc, &tv);
 	spid_subscribe(spid, SPI_EVENT_SUGGEST_GC, _gc_suggested);
 
+	/* NB: crucial "new packet" events can be added in spid_source_add() */
+
 	/* TODO: statistics / diagnostics? */
 
 	return spid;
@@ -127,7 +128,7 @@ struct spid *spid_init(struct spid_options *so)
 int spid_source_add(struct spid *spid, spid_source_t type, label_t label, const char *args)
 {
 	struct source *source;
-	int (*cb)(struct source *source, const char *args);
+	int (*initcb)(struct source *source, const char *args);
 	void (*readcb)(int fd, short evtype, void *arg);
 	int rc;
 
@@ -139,16 +140,17 @@ int spid_source_add(struct spid *spid, spid_source_t type, label_t label, const 
 	/* callbacks */
 	switch (type) {
 		case SPI_SOURCE_FILE:
-			cb     = source_file_init;
+			initcb = source_file_init;
 			readcb = source_file_read;
 			break;
 		case SPI_SOURCE_SNIFF:
-			cb     = source_sniff_init;
+			initcb  = source_sniff_init;
 			readcb = source_sniff_read;
 			break;
 	}
 
-	rc = cb(source, args);
+	/* initialize source handler, should give us valid source->fd to monitor */
+	rc = initcb(source, args);
 	if (rc != 0)
 		return rc;
 
@@ -157,6 +159,7 @@ int spid_source_add(struct spid *spid, spid_source_t type, label_t label, const 
 	event_add(source->evread, 0);
 
 	/* initialize classifier */
+	/* TODO: could be made in a modular way similar to different source kinds */
 	kissp_init(spid);
 
 	return rc;
@@ -172,7 +175,11 @@ void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t de
 	struct spid_event *se;
 	struct timeval tv;
 
-	if (spid->pending[code])
+	/* FIXME: == NULL causes assertion fail
+	 * - in mmatic_freeptr_ <- tlish_flush -> kissp_ep_ready: chunk->tag invalid (?)
+	 * - maybe because SPI_EVENT_SUGGEST_GC is handled before SPI_EVENT_ENDPOINT_HAS_C_PKTS :-)
+	 */
+	if (data == NULL && spid->pending[code])
 		return;
 	else
 		spid->pending[code] = true;
