@@ -165,8 +165,17 @@ static void _pcap_callback(u_char *arg, const struct pcap_pkthdr *msginfo, const
 	struct source *source = (struct source *) arg;
 
 	/* move virtual time forward */
-	if (source->type == SPI_SOURCE_FILE)
+	if (source->type == SPI_SOURCE_FILE) {
 		memcpy(&source->as.file.time, &msginfo->ts, sizeof(struct timeval));
+
+		/* call gc each virtual SPI_GC_INTERVAL seconds */
+		if (source->as.file.gctime.tv_sec == 0) {
+			source->as.file.gctime.tv_sec = source->as.file.time.tv_sec;
+		} else if (source->as.file.gctime.tv_sec + SPI_GC_INTERVAL < source->as.file.time.tv_sec) {
+			spid_gc(source->spid);
+			source->as.file.gctime.tv_sec = source->as.file.time.tv_sec;
+		}
+	}
 
 	/* NB: assuming Ethernet header starts at msg[0] */
 	_parse_new_packet(source,
@@ -237,6 +246,8 @@ void source_file_close(struct source *source)
 	event_del(source->evread);
 	pcap_close(source->as.file.pcap);
 	source->as.file.time.tv_sec = -1;  /* = inf */
+
+	spid_gc(source->spid);
 }
 
 /******/

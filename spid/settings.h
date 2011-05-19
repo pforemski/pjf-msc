@@ -31,4 +31,11 @@
 /** pcap default filter */
 #define SPI_PCAP_DEFAULT_FILTER "tcp or udp"
 
+/** Timeout a flow if no packets for given no. of seconds
+ * Affects mostly the SPI_DEFAULT_P limit of TCP packets per window */
+#define SPI_FLOW_TIMEOUT 300
+
+/** Endpoint timeout */
+#define SPI_EP_TIMEOUT 300
+
 #endif

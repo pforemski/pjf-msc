@@ -32,25 +32,32 @@ static void _gc(int fd, short evtype, void *arg)
 	const char *key;
 	struct flow *flow;
 	struct ep *ep;
-	struct timeval timeout;
+	struct timeval systime;
+	uint32_t now;
 
-	dbg(3, "garbage collector\n");
-
-	/* TODO: compute timeout moment */
-	timeout.tv_sec = 0;
-	timeout.tv_usec = 0;
+	gettimeofday(&systime, NULL);
 
 	thash_iter_loop(spid->flows, key, flow) {
-		if (!timercmp(&flow->last, &timeout, >)) {
-			/* TODO: destroy flow (lookout for the iterator) */
-		}
+		if (flow->source->type == SPI_SOURCE_FILE)
+			now = flow->source->as.file.time.tv_sec;
+		else
+			now = systime.tv_sec;
+
+		if (flow->last.tv_sec + SPI_FLOW_TIMEOUT < now)
+			thash_set(spid->flows, key, NULL);
 	}
 
 	thash_iter_loop(spid->eps, key, ep) {
-		if (!timercmp(&ep->last, &timeout, >)) {
-			/* TODO: destroy ep (lookout for the iterator) */
-		}
+		if (ep->source->type == SPI_SOURCE_FILE)
+			now = ep->source->as.file.time.tv_sec;
+		else
+			now = systime.tv_sec;
+
+		if (ep->last.tv_sec + SPI_EP_TIMEOUT < now)
+			thash_set(spid->eps, key, NULL);
 	}
+
+	spid->gcflag = false;
 }
 
 /** Handler for new spid events */
@@ -179,6 +186,18 @@ void spid_subscribe(struct spid *spid, spid_event_t code, spid_event_cb_t *cb)
 	ss->handler = cb;
 
 	tlist_push(spid->subscribers[code], ss);
+}
+
+void spid_gc(struct spid *spid)
+{
+	struct timeval zero = { 0, 0 };
+
+	if (!spid->gcflag) {
+		/* use gcflag flag to aggregate many immediate gc calls into one */
+		spid->gcflag = true;
+
+		event_add(spid->evgc, &zero);
+	}
 }
 
 /*

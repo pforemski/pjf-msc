@@ -14,6 +14,7 @@ void kissp_init(struct spid *spid)
 	spid_subscribe(spid, SPI_EVENT_ENDPOINT_HAS_C_PKTS, kissp_ep_ready);
 }
 
+/* TODO: check if ep->pkts realy has C pkts */
 void kissp_ep_ready(struct spid *spid, spid_event_t code, void *data)
 {
 	struct ep *ep = data;

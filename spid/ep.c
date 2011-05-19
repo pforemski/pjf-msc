@@ -41,6 +41,7 @@ struct ep *ep_new_pkt(struct source *source, proto_t proto, epaddr_t epa,
 		mm = mmatic_create();
 		ep = mmatic_zalloc(mm, sizeof *ep);
 		ep->mm = mm;
+		ep->source = source;
 		ep->proto = proto;
 		ep->epa = epa;
 		thash_set(spid->eps, key, ep);

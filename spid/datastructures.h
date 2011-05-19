@@ -65,6 +65,7 @@ struct source {
 			pcap_t *pcap;               /** libpcap handler */
 			const char *path;           /** file path */
 			struct timeval time;        /** virtual current time in file (time of last packet or inf.) */
+			struct timeval gctime;      /** virtual time of last garbage collector call */
 		} file;
 
 		struct source_sniff_t {
@@ -149,8 +150,10 @@ struct spid {
 	struct spid_options options;        /** spid options */
 
 	struct event_base *eb;              /** libevent root */
-	struct event *evgc;                 /** garbage collector event */
 	tlist *subscribers[SPI_EVENT_MAX+1];/** subscribers of spid events: list of struct spid_subscriber */
+
+	struct event *evgc;                 /** garbage collector event */
+	bool gcflag;                        /** set to false on each gc run */
 
 	tlist *sources;                     /** traffic sources: list of struct source */
 	thash *eps;                         /** endpoints: struct ep indexed by file_fd-proto-ip:port */

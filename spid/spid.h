@@ -47,4 +47,9 @@ void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t de
  */
 void spid_subscribe(struct spid *spid, spid_event_t code, spid_event_cb_t *cb);
 
+/** Call garbage collector ASAP
+ * In addition to calling it each SPI_GC_INTERVAL seconds
+ */
+void spid_gc(struct spid *spid);
+
 #endif
