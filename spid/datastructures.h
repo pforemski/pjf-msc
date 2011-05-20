@@ -149,6 +149,7 @@ struct spid_options {
 struct spid {
 	mmatic *mm;                         /** global mm */
 	struct spid_options options;        /** spid options */
+	bool running;                       /** true if in spid_loop() */
 
 	struct event_base *eb;              /** libevent root */
 	struct event *evgc;                 /** garbage collector event */

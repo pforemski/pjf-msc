@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
 {
 	struct spid *spid;
 	struct spid_options so;
+	int i;
 
 	debug = 10;
 
@@ -29,6 +30,7 @@ int main(int argc, char *argv[])
 
 	while (spid_loop(spid) == 0);
 
+	spid_free(spid);
 	return 1;
 }
 

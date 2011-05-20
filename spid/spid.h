@@ -48,4 +48,13 @@ void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t de
  */
 void spid_subscribe(struct spid *spid, spid_event_t code, spid_event_cb_t *cb, bool aggregate);
 
+/** Stop spid main loop
+ * @param  0         success
+ * @param -1         error occured
+ */
+int spid_stop(struct spid *spid);
+
+/** Free spid memory, close all resources, etc */
+void spid_free(struct spid *spid);
+
 #endif

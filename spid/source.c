@@ -203,6 +203,15 @@ static inline void _pcap_read(struct source *source, pcap_t *pcap)
 
 void source_destroy(struct source *source)
 {
+	switch (source->type) {
+		case SPI_SOURCE_FILE:
+			pcap_close(source->as.file.pcap);
+			break;
+		case SPI_SOURCE_SNIFF:
+			pcap_close(source->as.sniff.pcap);
+			break;
+	}
+
 	mmatic_freeptr(source);
 }
 
@@ -247,6 +256,8 @@ void source_file_read(int fd, short evtype, void *arg)
 void source_file_close(struct source *source)
 {
 	event_del(source->evread);
+	event_free(source->evread);
+
 	pcap_close(source->as.file.pcap);
 
 	source->as.file.time.tv_sec = -1;  /* = set virtual "now" to infinity */

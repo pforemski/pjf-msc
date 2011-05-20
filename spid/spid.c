@@ -105,7 +105,7 @@ struct spid *spid_init(struct spid_options *so)
 	spid->flows = thash_create_strkey(flow_destroy, mm);
 
 	for (i = 0; i < SPI_EVENT_MAX; i++)
-		spid->subscribers[i] = tlist_create(mmatic_freeptrs, mm);
+		spid->subscribers[i] = tlist_create(mmatic_freeptr, mm);
 
 	/* options */
 	if (so)
@@ -168,12 +168,25 @@ int spid_source_add(struct spid *spid, spid_source_t type, label_t label, const 
 	/* TODO: could be made in a modular way similar to different source kinds */
 	kissp_init(spid);
 
+	tlist_push(spid->sources, source);
 	return rc;
 }
 
 int spid_loop(struct spid *spid)
 {
-	return event_base_loop(spid->eb, EVLOOP_ONCE);
+	int rc;
+
+	spid->running = true;
+	rc = event_base_loop(spid->eb, EVLOOP_ONCE);
+	spid->running = false;
+
+	return rc;
+}
+
+int spid_stop(struct spid *spid)
+{
+	struct timeval tv = { 0, 0 };
+	return event_base_loopexit(spid->eb, &tv);
 }
 
 void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t delay_ms)
@@ -211,6 +224,29 @@ void spid_subscribe(struct spid *spid, spid_event_t code, spid_event_cb_t *cb, b
 		spid->status[code] = 0;
 	else
 		spid->status[code] = -1;
+}
+
+void spid_free(struct spid *spid)
+{
+	int i;
+
+	if (spid->running) {
+		dbg(0, "error: spid_free() while in spid_loop() - ignoring\n");
+		return;
+	}
+
+	event_del(spid->evgc);
+	event_free(spid->evgc);
+	event_base_free(spid->eb);
+
+	for (i = 0; i < SPI_EVENT_MAX; i++)
+		tlist_free(spid->subscribers[i]);
+
+	thash_free(spid->flows);
+	thash_free(spid->eps);
+	tlist_free(spid->sources);
+
+	mmatic_free(spid->mm);
 }
 
 /*

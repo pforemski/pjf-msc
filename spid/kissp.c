@@ -23,7 +23,6 @@ void kissp_ep_ready(struct spid *spid, spid_event_t code, void *data)
 		return;
 
 	/* TODO
-	 * - check for memory leaks before further work :)
 	 * - compare liblinear and libsvm API
 	 * - calculate ep->pkts signature: a (spid->options.N*2 + 3)-long array of (double) coordinates
 	 *   -> idea: use liblinears? (libsvm?) array of struct feature_node arrays ended by (-1,?)

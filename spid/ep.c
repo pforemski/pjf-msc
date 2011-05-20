@@ -59,7 +59,7 @@ struct ep *ep_new_pkt(struct source *source, proto_t proto, epaddr_t epa,
 
 	/* store packet */
 	if (!ep->pkts)
-		ep->pkts = tlist_create(mmatic_freeptrs, ep->mm);
+		ep->pkts = tlist_create(mmatic_freeptr, ep->mm);
 
 	tlist_push(ep->pkts, pkt);
 
