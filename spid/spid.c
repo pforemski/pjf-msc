@@ -165,7 +165,6 @@ int spid_source_add(struct spid *spid, spid_source_t type, label_t label, const 
 	event_add(source->evread, 0);
 
 	/* initialize classifier */
-	/* TODO: could be made in a modular way similar to different source kinds */
 	kissp_init(spid);
 
 	tlist_push(spid->sources, source);
@@ -234,6 +233,8 @@ void spid_free(struct spid *spid)
 		dbg(0, "error: spid_free() while in spid_loop() - ignoring\n");
 		return;
 	}
+
+	kissp_free(spid);
 
 	event_del(spid->evgc);
 	event_free(spid->evgc);

@@ -33,6 +33,7 @@ typedef enum {
 typedef enum {
 	SPI_EVENT_ENDPOINT_HAS_C_PKTS = 1,  /* arg = struct ep* */
 	SPI_EVENT_SUGGEST_GC,               /* arg = NULL */
+	SPI_EVENT_KISSP_TRAIN,              /* arg = NULL */
 	SPI_EVENT_MAX                       /* keep it last */
 } spid_event_t;
 
@@ -160,6 +161,8 @@ struct spid {
 	tlist *sources;                     /** traffic sources: list of struct source */
 	thash *eps;                         /** endpoints: struct ep indexed by file_fd-proto-epa */
 	thash *flows;                       /** flows: struct flow indexed by file_fd-proto-epa1-epa2 where epa1 < epa2 */
+
+	void *cdata;                        /** classifiers private data */
 };
 
 /** spid event representation */

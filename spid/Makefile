@@ -1,4 +1,4 @@
-CFLAGS =
+CFLAGS = -I/usr/include/libsvm-2.0
 LDFLAGS = -lpjf -lpcre -levent -lpcap
 
 ME=spid
