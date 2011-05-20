@@ -64,8 +64,8 @@ struct ep *ep_new_pkt(struct source *source, proto_t proto, epaddr_t epa,
 	tlist_push(ep->pkts, pkt);
 
 	/* generate event if pkts big enough */
-	if (!ep->has_C && tlist_count(ep->pkts) >= spid->options.C) {
-		ep->has_C = true;
+	if (!ep->pending && tlist_count(ep->pkts) >= spid->options.C) {
+		ep->pending = true;
 		spid_announce(spid, SPI_EVENT_ENDPOINT_HAS_C_PKTS, ep, 0);
 	}
 

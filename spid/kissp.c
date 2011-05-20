@@ -11,7 +11,7 @@
 
 void kissp_init(struct spid *spid)
 {
-	spid_subscribe(spid, SPI_EVENT_ENDPOINT_HAS_C_PKTS, kissp_ep_ready);
+	spid_subscribe(spid, SPI_EVENT_ENDPOINT_HAS_C_PKTS, kissp_ep_ready, false);
 }
 
 void kissp_ep_ready(struct spid *spid, spid_event_t code, void *data)
@@ -40,5 +40,5 @@ void kissp_ep_ready(struct spid *spid, spid_event_t code, void *data)
 
 	dbg(5, "endpoint %s ready!\n", epa_print(ep->epa));
 	tlist_flush(ep->pkts);
-	ep->has_C = false;
+	ep->pending = false;
 }

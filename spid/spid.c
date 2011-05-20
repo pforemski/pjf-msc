@@ -48,6 +48,10 @@ static void _gc(int fd, short evtype, void *arg)
 	}
 
 	thash_iter_loop(spid->eps, key, ep) {
+		/* skip eps waiting for classification */
+		if (ep->pending)
+			continue;
+
 		if (ep->source->type == SPI_SOURCE_FILE)
 			now = ep->source->as.file.time.tv_sec;
 		else
@@ -70,7 +74,9 @@ static void _new_spid_event(int fd, short evtype, void *arg)
 	struct spid_subscriber *ss;
 
 	tlist_iter_loop(se->spid->subscribers[se->code], ss) {
-		se->spid->pending[se->code] = false;
+		if (se->spid->status[se->code] == 1)
+			se->spid->status[se->code] = 0;
+
 		ss->handler(se->spid, se->code, se->data);
 	}
 
@@ -116,7 +122,7 @@ struct spid *spid_init(struct spid_options *so)
 	tv.tv_usec = 0;
 	spid->evgc = event_new(spid->eb, -1, EV_PERSIST, _gc, spid);
 	event_add(spid->evgc, &tv);
-	spid_subscribe(spid, SPI_EVENT_SUGGEST_GC, _gc_suggested);
+	spid_subscribe(spid, SPI_EVENT_SUGGEST_GC, _gc_suggested, true);
 
 	/* NB: crucial "new packet" events can be added in spid_source_add() */
 
@@ -175,14 +181,10 @@ void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t de
 	struct spid_event *se;
 	struct timeval tv;
 
-	/* FIXME: == NULL causes assertion fail
-	 * - in mmatic_freeptr_ <- tlish_flush -> kissp_ep_ready: chunk->tag invalid (?)
-	 * - maybe because SPI_EVENT_SUGGEST_GC is handled before SPI_EVENT_ENDPOINT_HAS_C_PKTS :-)
-	 */
-	if (data == NULL && spid->pending[code])
+	if (spid->status[code] == 1)
 		return;
-	else
-		spid->pending[code] = true;
+	else if (spid->status[code] == 0)
+		spid->status[code] = 1;
 
 	se = mmatic_alloc(spid->mm, sizeof *se);
 	se->spid = spid;
@@ -196,7 +198,7 @@ void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t de
 	event_base_once(spid->eb, -1, EV_TIMEOUT, _new_spid_event, se, &tv);
 }
 
-void spid_subscribe(struct spid *spid, spid_event_t code, spid_event_cb_t *cb)
+void spid_subscribe(struct spid *spid, spid_event_t code, spid_event_cb_t *cb, bool aggregate)
 {
 	struct spid_subscriber *ss;
 
@@ -204,6 +206,11 @@ void spid_subscribe(struct spid *spid, spid_event_t code, spid_event_cb_t *cb)
 	ss->handler = cb;
 
 	tlist_push(spid->subscribers[code], ss);
+
+	if (aggregate)
+		spid->status[code] = 0;
+	else
+		spid->status[code] = -1;
 }
 
 /*

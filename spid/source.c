@@ -230,6 +230,8 @@ int source_file_init(struct source *source, const char *args)
 		return -1;
 	}
 
+	dbg(1, "pcap file %s opened\n", path);
+
 	source->as.file.path = path;
 	source->fd = fileno(stream);
 	return _pcap_add_filter(source, source->as.file.pcap, filter);
@@ -238,6 +240,7 @@ int source_file_init(struct source *source, const char *args)
 void source_file_read(int fd, short evtype, void *arg)
 {
 	struct source *source = arg;
+	source->counter++;
 	_pcap_read(source, source->as.file.pcap);
 }
 
@@ -248,6 +251,9 @@ void source_file_close(struct source *source)
 
 	source->as.file.time.tv_sec = -1;  /* = set virtual "now" to infinity */
 	spid_announce(source->spid, SPI_EVENT_SUGGEST_GC, NULL, 0);
+
+	dbg(1, "pcap file %s finished and closed (read %u packets)\n",
+		source->as.file.path, source->counter);
 }
 
 /******/
@@ -267,6 +273,8 @@ int source_sniff_init(struct source *source, const char *args)
 		return -1;
 	}
 
+	dbg(1, "interface %s opened\n", ifname);
+
 	source->as.sniff.ifname = ifname;
 	source->fd = pcap_fileno(source->as.sniff.pcap);
 	return _pcap_add_filter(source, source->as.sniff.pcap, filter);
@@ -275,5 +283,6 @@ int source_sniff_init(struct source *source, const char *args)
 void source_sniff_read(int fd, short evtype, void *arg)
 {
 	struct source *source = arg;
+	source->counter++;
 	_pcap_read(source, source->as.sniff.pcap);
 }

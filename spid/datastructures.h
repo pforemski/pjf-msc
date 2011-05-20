@@ -59,6 +59,7 @@ struct source {
 
 	int fd;                             /** underlying fd to monitor for read() possibility */
 	struct event *evread;               /** fd read event */
+	int counter;                        /** packet counter */
 
 	/** internal data depending on type */
 	union {
@@ -118,7 +119,7 @@ struct ep {
 
 	struct timeval last;                /** time of last packet (for GC) */
 	tlist *pkts;                        /** collected packets */
-	bool has_C;                         /** true if tlist_count(pkts) >= C */
+	bool pending;                       /** true if tlist_count(pkts) >= C */
 
 	struct verdict *verdict;            /** classifier verdict info */
 };
@@ -153,7 +154,7 @@ struct spid {
 	struct event *evgc;                 /** garbage collector event */
 
 	tlist *subscribers[SPI_EVENT_MAX+1];/** subscribers of spid events: list of struct spid_subscriber */
-	bool   pending[SPI_EVENT_MAX+1];    /** pending[i] true if spid event i announced but not handled yet */
+	int    status[SPI_EVENT_MAX+1];     /** event status: -1 ignore status, 0 handled, 1 pending */
 
 	tlist *sources;                     /** traffic sources: list of struct source */
 	thash *eps;                         /** endpoints: struct ep indexed by file_fd-proto-epa */

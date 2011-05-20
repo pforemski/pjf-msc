@@ -36,8 +36,7 @@ int spid_loop(struct spid *spid);
 
 /** Announce a spid event
  * @param code       event code
- * @param data       opaque data specific to given event; if NULL, spid will ignore
- *                   any further announcements of same code before the handler runs
+ * @param data       opaque data specific to given event
  * @param delay_ms   delay in miliseconds before delivering the event
  */
 void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t delay_ms);
@@ -45,7 +44,8 @@ void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t de
 /** Subscribe to given spid event
  * @param code       event code
  * @param cb         event handler - receives code and data from spid_announce()
+ * @param aggregate  if true, aggregate multiple immediate event repetitions as one
  */
-void spid_subscribe(struct spid *spid, spid_event_t code, spid_event_cb_t *cb);
+void spid_subscribe(struct spid *spid, spid_event_t code, spid_event_cb_t *cb, bool aggregate);
 
 #endif
