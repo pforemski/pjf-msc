@@ -25,8 +25,11 @@ int main(int argc, char *argv[])
 	if (spid_source_add(spid, SPI_SOURCE_SNIFF, 0, "wlan0 "))
 		return 1;
 
-	if (spid_source_add(spid, SPI_SOURCE_FILE, 0, "/home/pjf/makro/mgr/dumps/udp/dns2"))
+	if (spid_source_add(spid, SPI_SOURCE_FILE, 1, "/home/pjf/makro/mgr/dumps/udp/dns2"))
 		return 1;
+
+//	if (spid_source_add(spid, SPI_SOURCE_FILE, 0, "/home/pjf/makro/mgr/dumps/udp/dns3"))
+//		return 1;
 
 	while (spid_loop(spid) == 0);
 

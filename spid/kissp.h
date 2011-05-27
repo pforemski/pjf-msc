@@ -26,7 +26,23 @@ struct signature {
 
 /** Internal KISSP data */
 struct kissp {
-	tlist *traindata;        /** signatures with labels */
+	tlist *traindata;        /** list of struct signature*: signatures with labels */
+
+	/** KISSP options */
+	struct {
+		bool pktstats;       /** use packet stats in signatures */
+		enum {
+			KISSP_LIBLINEAR,
+			KISSP_LIBSVM
+		} method;            /** classification method */
+	} options;
+
+	/** per-method internal data */
+	union {
+		struct {
+			struct model *model;   /** liblinear model */
+		} linear;
+	} as;
 };
 
 /** Initialize KISS+ classifier */
@@ -34,11 +50,5 @@ void kissp_init(struct spid *spid);
 
 /** Deinitialize classifier and free memory */
 void kissp_free(struct spid *spid);
-
-/** Receives events of endpoint being ready for classification
- * @param code      SPI_EVENT_ENDPOINT_HAS_C_PKTS
- * @param data      struct ep pointer
- */
-void kissp_ep_ready(struct spid *spid, spid_event_t code, void *data);
 
 #endif

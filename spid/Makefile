@@ -1,5 +1,5 @@
 CFLAGS = -I/usr/include/libsvm-2.0
-LDFLAGS = -lpjf -lpcre -levent -lpcap
+LDFLAGS = -lpjf -lpcre -levent -lpcap -lm -llinear
 
 ME=spid
 C_OBJECTS=main.o spid.o source.o ep.o flow.o kissp.o

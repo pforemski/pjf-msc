@@ -164,6 +164,8 @@ static void _pcap_callback(u_char *arg, const struct pcap_pkthdr *msginfo, const
 {
 	struct source *source = (struct source *) arg;
 
+	source->counter++;
+
 	/* move virtual time forward */
 	if (source->type == SPI_SOURCE_FILE) {
 		memcpy(&source->as.file.time, &msginfo->ts, sizeof(struct timeval));
@@ -249,7 +251,6 @@ int source_file_init(struct source *source, const char *args)
 void source_file_read(int fd, short evtype, void *arg)
 {
 	struct source *source = arg;
-	source->counter++;
 	_pcap_read(source, source->as.file.pcap);
 }
 

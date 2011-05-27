@@ -124,7 +124,10 @@ struct spid *spid_init(struct spid_options *so)
 	event_add(spid->evgc, &tv);
 	spid_subscribe(spid, SPI_EVENT_SUGGEST_GC, _gc_suggested, true);
 
-	/* NB: crucial "new packet" events can be added in spid_source_add() */
+	/* NB: "new packet" events will be added by spid_source_add() */
+
+	/* initialize classifier */
+	kissp_init(spid);
 
 	/* TODO: statistics / diagnostics? */
 
@@ -163,9 +166,6 @@ int spid_source_add(struct spid *spid, spid_source_t type, label_t label, const 
 	/* monitor source fd for new packets */
 	source->evread = event_new(spid->eb, source->fd, EV_READ | EV_PERSIST, readcb, source);
 	event_add(source->evread, 0);
-
-	/* initialize classifier */
-	kissp_init(spid);
 
 	tlist_push(spid->sources, source);
 	return rc;

@@ -33,7 +33,7 @@ typedef enum {
 typedef enum {
 	SPI_EVENT_ENDPOINT_HAS_C_PKTS = 1,  /* arg = struct ep* */
 	SPI_EVENT_SUGGEST_GC,               /* arg = NULL */
-	SPI_EVENT_KISSP_TRAIN,              /* arg = NULL */
+	SPI_EVENT_KISSP_NEW_TRAINDATA,      /* arg = NULL */
 	SPI_EVENT_MAX                       /* keep it last */
 } spid_event_t;
 
