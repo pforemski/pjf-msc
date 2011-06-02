@@ -5,9 +5,7 @@
  */
 
 #include <libpjf/main.h>
-
-#include "datastructures.h"
-#include "spi.h"
+#include <libspi/spi.h>
 
 int main(int argc, char *argv[])
 {
