@@ -19,6 +19,9 @@ typedef uint8_t label_t;
 /* keep in sync */
 #define SPI_MAXLABEL 255
 
+/** Table with classification probabilities */
+typedef double cprob_t[SPI_MAXLABEL+1];
+
 /** Endpoint address (ip << 32 | port) */
 typedef uint64_t epaddr_t;
 
@@ -28,15 +31,6 @@ typedef enum {
 	SPI_PROTO_UDP
 } proto_t;
 
-/** spid event
- * Its a special case of an internal event, distinct from events understood as in libevent */
-typedef enum {
-	SPI_EVENT_ENDPOINT_HAS_C_PKTS = 1,  /* arg = struct ep* */
-	SPI_EVENT_SUGGEST_GC,               /* arg = NULL */
-	SPI_EVENT_KISSP_NEW_TRAINDATA,      /* arg = NULL */
-	SPI_EVENT_MAX                       /* keep it last */
-} spid_event_t;
-
 /** spid traffic source type */
 typedef enum {
 	SPI_SOURCE_FILE = 1,
@@ -45,10 +39,10 @@ typedef enum {
 
 /** spid event handler
  * @param spid              spid root
- * @param code              event code
- * @param data              event opaque data
+ * @param evname            spid event name
+ * @param arg               event opaque data
  */
-typedef void spid_event_cb_t(struct spid *spid, spid_event_t code, void *data);
+typedef void spid_event_cb_t(struct spid *spid, const char *evname, void *arg);
 
 /************************************************************************/
 
@@ -85,32 +79,6 @@ struct pkt {
 	uint16_t size;                      /** packet size */
 };
 
-/** Verdict information */
-struct verdict {
-	/** type of verdict decision */
-	enum verdict_t {
-		SPI_VERDICT_SIMPLE = 1,
-		SPI_VERDICT_EWMA
-	} type;
-
-	/** internal info */
-	union {
-		struct verdict_simple_t {
-			uint8_t last;
-		} simple;
-
-		struct veridct_emwa_t {
-			uint16_t ewma_len;          /** EWMA length */
-			float verdicts[SPI_MAXLABEL+1]; /** histogram of verdicts over time:
-			                                    EWMA(SPI_VERDICTS) of class. probabilty for each label */
-		} ewma;
-	} as;
-
-	uint32_t count;                     /** number of final decisions so far */
-	float prob;                         /** probability of the final decision */
-	label_t label;                      /** final decision */
-};
-
 /** Represents a single endpoint */
 struct ep {
 	mmatic *mm;                         /** mm for this endpoint */
@@ -122,7 +90,18 @@ struct ep {
 	tlist *pkts;                        /** collected packets */
 	bool pending;                       /** true if tlist_count(pkts) >= C */
 
-	struct verdict *verdict;            /** classifier verdict info */
+	label_t verdict;                    /** current verdict */
+	double verdict_prob;                /** current verdict probability */
+	uint32_t verdict_count;             /** number of verdicts so far */
+
+	void *vdata;                        /** classifier verdict internal data */
+};
+
+/** Represents classification result */
+struct classification_result {
+	struct ep *ep;                      /** endpoint */
+	label_t result;                     /** most probable result */
+	cprob_t cprob;                      /** classification probabilities */
 };
 
 /** Represents a flow */
@@ -155,26 +134,31 @@ struct spid {
 	struct event_base *eb;              /** libevent root */
 	struct event *evgc;                 /** garbage collector event */
 
-	tlist *subscribers[SPI_EVENT_MAX+1];/** subscribers of spid events: list of struct spid_subscriber */
-	int    status[SPI_EVENT_MAX+1];     /** event status: -1 ignore status, 0 handled, 1 pending */
+	thash *subscribers;                 /** subscribers of spid events: thash of tlists of struct spid_subscriber */
+	thash *aggstatus;                   /** thash of int aggregation status: see SPI_AGG_* */
+#define SPI_AGG_IGNORE  0
+#define SPI_AGG_READY   1
+#define SPI_AGG_PENDING 2
 
 	tlist *sources;                     /** traffic sources: list of struct source */
 	thash *eps;                         /** endpoints: struct ep indexed by file_fd-proto-epa */
 	thash *flows;                       /** flows: struct flow indexed by file_fd-proto-epa1-epa2 where epa1 < epa2 */
 
 	void *cdata;                        /** classifiers private data */
+	void *vdata;                        /** verdict private data */
 };
 
 /** spid event representation */
 struct spid_event {
 	struct spid *spid;                  /** spid root */
-	spid_event_t code;                  /** event code */
-	void *data;                         /** opaque data */
+	const char *evname;                 /** event name */
+	tlist *sl;                          /** subscriber list */
+	void *arg;                          /** opaque data */
+	bool argfree;                       /** free arg after handler call */
 };
 
-/** spid event subscriber */
 struct spid_subscriber {
-	spid_event_cb_t *handler;           /** callback to call */
+	spid_event_cb_t *handler;           /** handler address */
 };
 
 #endif

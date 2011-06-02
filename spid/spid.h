@@ -35,18 +35,19 @@ int spid_source_add(struct spid *spid, spid_source_t type, label_t label, const 
 int spid_loop(struct spid *spid);
 
 /** Announce a spid event
- * @param code       event code
- * @param data       opaque data specific to given event
+ * @param evname     spid event name (referenced)
  * @param delay_ms   delay in miliseconds before delivering the event
+ * @param arg        opaque data specific to given event
+ * @param argfree    do mmatic_freeptr(arg) after event handling / ignoring
  */
-void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t delay_ms);
+void spid_announce(struct spid *spid, const char *evname, uint32_t delay_ms, void *arg, bool argfree);
 
 /** Subscribe to given spid event
- * @param code       event code
+ * @param evname     spid event name (referenced)
  * @param cb         event handler - receives code and data from spid_announce()
- * @param aggregate  if true, aggregate multiple immediate event repetitions as one
+ * @param aggregate  if true, ignore further events until the first one is handled
  */
-void spid_subscribe(struct spid *spid, spid_event_t code, spid_event_cb_t *cb, bool aggregate);
+void spid_subscribe(struct spid *spid, const char *evname, spid_event_cb_t *cb, bool aggregate);
 
 /** Stop spid main loop
  * @param  0         success

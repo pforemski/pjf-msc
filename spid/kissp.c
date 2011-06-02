@@ -11,11 +11,29 @@
 #include "ep.h"
 
 /********** liblinear */
+static void _linear_print_func(const char *msg)
+{
+	while (*msg == '\n') msg++;
+	dbg(9, "liblinear: %s", msg);
+}
+
+static void _linear_init(struct spid *spid)
+{
+	struct kissp *kissp = spid->cdata;
+
+	/* set parameters (TODO?) */
+	kissp->as.linear.params.solver_type = L2R_L2LOSS_SVC_DUAL;
+	kissp->as.linear.params.eps = 0.1;
+	kissp->as.linear.params.C = 1;
+	kissp->as.linear.params.nr_weight = 0;     /* NB: .weight_label and .weight not set */
+
+	set_print_string_function(_linear_print_func);
+}
+
 static void _linear_train(struct spid *spid)
 {
 	struct kissp *kissp = spid->cdata;
 	struct problem p;
-	struct parameter params;
 	struct signature *s;
 	int i;
 	const char *err;
@@ -39,14 +57,8 @@ static void _linear_train(struct spid *spid)
 
 	p.bias = -1.0;
 
-	/* set parameters (TODO?) */
-	params.solver_type = L2R_L2LOSS_SVC_DUAL;
-	params.eps = 0.1;
-	params.C = 1;
-	params.nr_weight = 0;     /* NB: .weight_label and .weight not set */
-
 	/* check */
-	err = check_parameter(&p, &params);
+	err = check_parameter(&p, &kissp->as.linear.params);
 	if (err) {
 		dbg(1, "liblinear training failed: check_parameter(): %s\n", err);
 		return;
@@ -57,7 +69,7 @@ static void _linear_train(struct spid *spid)
 		free_and_destroy_model(&kissp->as.linear.model);
 
 	/* run */
-	kissp->as.linear.model = train(&p, &params);
+	kissp->as.linear.model = train(&p, &kissp->as.linear.params);
 
 	dbg(5, "updated liblinear model, nr_class=%d, nr_feature=%d\n",
 		kissp->as.linear.model->nr_class,
@@ -70,29 +82,29 @@ static void _linear_train(struct spid *spid)
 static void _linear_predict(struct spid *spid, struct signature *sign, struct ep *ep)
 {
 	struct kissp *kissp = spid->cdata;
-	int l;
-	double *prob;
+	struct classification_result *cr;
 
 	if (!kissp->as.linear.model) {
 		dbg(1, "cant classify: no model\n");
 		return;
 	}
 
-	/* TODO: only for logistic regression */
-	prob = mmatic_alloc(spid->mm, sizeof(double) * (get_nr_class(kissp->as.linear.model) + 1));
-	l = predict_probability(kissp->as.linear.model, (struct feature_node *) sign->c, prob);
-	dbg(0, "classified ep %s as %u with prob %g\n", epa_print(ep->epa), l, prob[l]);
+	cr = mmatic_zalloc(spid->mm, sizeof *cr);
+	cr->ep = ep;
 
-	l = predict(kissp->as.linear.model, (struct feature_node *) sign->c);
-	dbg(0, "classified ep %s as %u\n", epa_print(ep->epa), l);
+	switch (kissp->as.linear.params.solver_type) {
+		case L2R_LR:
+		case L1R_LR:
+			/* logistic regression supports prediction probability */
+			cr->result = predict_probability(kissp->as.linear.model, (struct feature_node *) sign->c, cr->cprob);
+			break;
+		default:
+			cr->result = predict(kissp->as.linear.model, (struct feature_node *) sign->c);
+			cr->cprob[cr->result] = 1.0;
+			break;
+	}
 
-	/* TODO: use int predict_probability(struct model *, struct feature_node *, double *output_probabilities)
-	 *       output_probabilities need to be allocated here, nr_class elements */
-	
-	/* TODO: announce new verdict
-	 *       new verdict handler can announce action_changed(ep) with some delay */
-
-	mmatic_freeptr(prob);
+	spid_announce(spid, "endpointClassification", 0, cr, true);
 }
 
 /********** libsvm */
@@ -262,8 +274,8 @@ static void _signature_add_train(struct spid *spid, struct signature *sign, labe
 	sign->label = label;
 	tlist_push(kissp->traindata, sign);
 
-	/* update model with a delay so many training samples could be queued */
-	spid_announce(spid, SPI_EVENT_KISSP_NEW_TRAINDATA, NULL, SPI_TRAINING_DELAY);
+	/* update model with a delay so many training samples have chance to be queued */
+	spid_announce(spid, "kisspTraindataUpdated", SPI_TRAINING_DELAY, NULL, false);
 
 	return;
 }
@@ -283,8 +295,8 @@ void _predict(struct spid *spid, struct signature *sign, struct ep *ep)
 	}
 }
 
-/** Receives SPI_EVENT_ENDPOINT_HAS_C_PKTS */
-static void _ep_ready(struct spid *spid, spid_event_t code, void *data)
+/** Receives "endpointPacketsReady */
+static void _ep_ready(struct spid *spid, const char *evname, void *data)
 {
 	struct ep *ep = data;
 	struct signature *sign;
@@ -304,8 +316,8 @@ static void _ep_ready(struct spid *spid, spid_event_t code, void *data)
 	ep->pending = false;
 }
 
-/** Receives SPI_EVENT_KISSP_NEW_TRAINDATA */
-void _train(struct spid *spid, spid_event_t code, void *data)
+/** Receives "kisspTraindataUpdated */
+void _train(struct spid *spid, const char *evname, void *data)
 {
 	struct kissp *kissp = spid->cdata;
 
@@ -328,17 +340,19 @@ void kissp_init(struct spid *spid)
 	struct kissp *kissp;
 
 	/* subscribe to endpoints accumulating 80+ packets */
-	spid_subscribe(spid, SPI_EVENT_ENDPOINT_HAS_C_PKTS, _ep_ready, false);
+	spid_subscribe(spid, "endpointPacketsReady", _ep_ready, false);
 
 	/* subscribe to new learning samples */
-	spid_subscribe(spid, SPI_EVENT_KISSP_NEW_TRAINDATA, _train, true);
+	spid_subscribe(spid, "kisspTraindataUpdated", _train, true);
 
 	kissp = mmatic_zalloc(spid->mm, sizeof *kissp);
 	kissp->traindata = tlist_create(_signature_free, spid->mm);
+	spid->cdata = kissp;
+
+	/* TODO: let for choosing options */
 	kissp->options.pktstats = true;
 	kissp->options.method = KISSP_LIBLINEAR;
-
-	spid->cdata = kissp;
+	_linear_init(spid);
 }
 
 void kissp_free(struct spid *spid)

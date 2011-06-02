@@ -66,7 +66,7 @@ struct ep *ep_new_pkt(struct source *source, proto_t proto, epaddr_t epa,
 	/* generate event if pkts big enough */
 	if (!ep->pending && tlist_count(ep->pkts) >= spid->options.C) {
 		ep->pending = true;
-		spid_announce(spid, SPI_EVENT_ENDPOINT_HAS_C_PKTS, ep, 0);
+		spid_announce(spid, "endpointPacketsReady", 0, ep, false);
 	}
 
 	return ep;

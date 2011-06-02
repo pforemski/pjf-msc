@@ -16,6 +16,7 @@
 #include "ep.h"
 #include "flow.h"
 #include "kissp.h"
+#include "verdict.h"
 
 /** Setup default options */
 static void _options_defaults(struct spid *spid)
@@ -62,7 +63,7 @@ static void _gc(int fd, short evtype, void *arg)
 	}
 }
 
-static void _gc_suggested(struct spid *spid, spid_event_t code, void *data)
+static void _gc_suggested(struct spid *spid, const char *evname, void *data)
 {
 	_gc(0, 0, spid);
 }
@@ -71,14 +72,18 @@ static void _gc_suggested(struct spid *spid, spid_event_t code, void *data)
 static void _new_spid_event(int fd, short evtype, void *arg)
 {
 	struct spid_event *se = arg;
+	struct spid *spid = se->spid;
 	struct spid_subscriber *ss;
 
-	tlist_iter_loop(se->spid->subscribers[se->code], ss) {
-		if (se->spid->status[se->code] == 1)
-			se->spid->status[se->code] = 0;
+	if (((int) thash_get(spid->aggstatus, se->evname)) == SPI_AGG_PENDING)
+		thash_set(spid->aggstatus, se->evname, (void *) SPI_AGG_READY);
 
-		ss->handler(se->spid, se->code, se->data);
+	tlist_iter_loop(se->sl, ss) {
+		ss->handler(spid, se->evname, se->arg);
 	}
+
+	if (se->argfree)
+		mmatic_freeptr(se->arg);
 
 	mmatic_freeptr(se);
 }
@@ -87,7 +92,6 @@ static void _new_spid_event(int fd, short evtype, void *arg)
 
 struct spid *spid_init(struct spid_options *so)
 {
-	int i;
 	mmatic *mm;
 	struct spid *spid;
 	struct timeval tv;
@@ -103,9 +107,8 @@ struct spid *spid_init(struct spid_options *so)
 	spid->sources = tlist_create(source_destroy, mm);
 	spid->eps = thash_create_strkey(ep_destroy, mm);
 	spid->flows = thash_create_strkey(flow_destroy, mm);
-
-	for (i = 0; i < SPI_EVENT_MAX; i++)
-		spid->subscribers[i] = tlist_create(mmatic_freeptr, mm);
+	spid->subscribers = thash_create_strkey(tlist_free, mm);
+	spid->aggstatus = thash_create_strkey(NULL, mm);
 
 	/* options */
 	if (so)
@@ -122,12 +125,15 @@ struct spid *spid_init(struct spid_options *so)
 	tv.tv_usec = 0;
 	spid->evgc = event_new(spid->eb, -1, EV_PERSIST, _gc, spid);
 	event_add(spid->evgc, &tv);
-	spid_subscribe(spid, SPI_EVENT_SUGGEST_GC, _gc_suggested, true);
+	spid_subscribe(spid, "gcSuggestion", _gc_suggested, true);
 
 	/* NB: "new packet" events will be added by spid_source_add() */
 
 	/* initialize classifier */
 	kissp_init(spid);
+
+	/* initialize verdict */
+	verdict_init(spid);
 
 	/* TODO: statistics / diagnostics? */
 
@@ -188,61 +194,88 @@ int spid_stop(struct spid *spid)
 	return event_base_loopexit(spid->eb, &tv);
 }
 
-void spid_announce(struct spid *spid, spid_event_t code, void *data, uint32_t delay_ms)
+void spid_announce(struct spid *spid, const char *evname, uint32_t delay_ms, void *arg, bool argfree)
 {
 	struct spid_event *se;
 	struct timeval tv;
+	int s;
+	tlist *sl;
 
-	if (spid->status[code] == 1)
-		return;
-	else if (spid->status[code] == 0)
-		spid->status[code] = 1;
+	/* handle aggregation */
+	s = (int) thash_get(spid->aggstatus, evname);
+	switch (s) {
+		case SPI_AGG_IGNORE:
+			break;
+		case SPI_AGG_PENDING:
+			goto quit;
+		case SPI_AGG_READY:
+			thash_set(spid->aggstatus, evname, (void *) SPI_AGG_PENDING);
+			break;
+	}
+
+	/* get subscriber list */
+	sl = thash_get(spid->subscribers, evname);
+	if (!sl)
+		goto quit;
 
 	se = mmatic_alloc(spid->mm, sizeof *se);
 	se->spid = spid;
-	se->code = code;
-	se->data = data;
+	se->evname = evname;
+	se->sl = sl;
+	se->arg = arg;
+	se->argfree = argfree;
 
 	tv.tv_sec  = delay_ms / 1000;
 	tv.tv_usec = (delay_ms % 1000) * 1000;
 
 	/* XXX: queue instead of instant handler call */
 	event_base_once(spid->eb, -1, EV_TIMEOUT, _new_spid_event, se, &tv);
+	return;
+
+quit:
+	if (argfree) mmatic_freeptr(arg);
+	return;
 }
 
-void spid_subscribe(struct spid *spid, spid_event_t code, spid_event_cb_t *cb, bool aggregate)
+void spid_subscribe(struct spid *spid, const char *evname, spid_event_cb_t *cb, bool aggregate)
 {
 	struct spid_subscriber *ss;
+	tlist *sl;
 
-	ss = mmatic_alloc(spid->mm, sizeof *ss);
+	/* get subscriber list */
+	sl = thash_get(spid->subscribers, evname);
+	if (!sl) {
+		sl = tlist_create(mmatic_freeptr, spid->mm);
+		thash_set(spid->subscribers, evname, sl);
+	}
+
+	/* append callback to subscriber list */
+	ss = mmatic_zalloc(spid->mm, sizeof *ss);
 	ss->handler = cb;
-
-	tlist_push(spid->subscribers[code], ss);
+	tlist_push(sl, ss);
 
 	if (aggregate)
-		spid->status[code] = 0;
+		thash_set(spid->aggstatus, evname, (void *) SPI_AGG_READY);
 	else
-		spid->status[code] = -1;
+		thash_set(spid->aggstatus, evname, (void *) SPI_AGG_IGNORE);
 }
 
 void spid_free(struct spid *spid)
 {
-	int i;
-
 	if (spid->running) {
 		dbg(0, "error: spid_free() while in spid_loop() - ignoring\n");
 		return;
 	}
 
+	verdict_free(spid);
 	kissp_free(spid);
 
 	event_del(spid->evgc);
 	event_free(spid->evgc);
 	event_base_free(spid->eb);
 
-	for (i = 0; i < SPI_EVENT_MAX; i++)
-		tlist_free(spid->subscribers[i]);
-
+	thash_free(spid->aggstatus);
+	thash_free(spid->subscribers);
 	thash_free(spid->flows);
 	thash_free(spid->eps);
 	tlist_free(spid->sources);

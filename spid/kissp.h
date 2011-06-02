@@ -40,7 +40,8 @@ struct kissp {
 	/** per-method internal data */
 	union {
 		struct {
-			struct model *model;   /** liblinear model */
+			struct model *model;      /** liblinear model */
+			struct parameter params;  /** liblinear parameters */
 		} linear;
 	} as;
 };
