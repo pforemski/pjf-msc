@@ -4,8 +4,8 @@
  * This software is licensed under GNU GPL version 3
  */
 
-#ifndef _SPID_H_
-#define _SPID_H_
+#ifndef _SPI_H_
+#define _SPI_H_
 
 #include "settings.h"
 #include "datastructures.h"

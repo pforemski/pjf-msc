@@ -213,6 +213,11 @@ void spi_announce(struct spi *spi, const char *evname, uint32_t delay_ms, void *
 			break;
 	}
 
+	if (delay_ms)
+		dbg(8, "event %s in %u ms\n", evname, delay_ms);
+	else
+		dbg(8, "event %s\n", evname);
+
 	/* get subscriber list */
 	sl = thash_get(spi->subscribers, evname);
 	if (!sl)
