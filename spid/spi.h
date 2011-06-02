@@ -1,5 +1,5 @@
 /*
- * spid: Statistical Packet Inspection
+ * spi: Statistical Packet Inspection
  * Copyright (C) 2011 Paweł Foremski <pawel@foremski.pl>
  * This software is licensed under GNU GPL version 3
  */
@@ -10,12 +10,12 @@
 #include "settings.h"
 #include "datastructures.h"
 
-/** Initialize spid
- * Does initialization of struct spid and setups basic events
+/** Initialize spi
+ * Does initialization of struct spi and setups basic events
  * @param so         options to apply (may be NULL)
  * @retval NULL      failure
  */
-struct spid *spid_init(struct spid_options *so);
+struct spi *spi_init(struct spi_options *so);
 
 /** Add traffic source
  * @param type       type of the source (SPI_SOURCE_PCAP, ...)
@@ -25,37 +25,37 @@ struct spid *spid_init(struct spid_options *so);
  * @retval 1         failure
  * @retval <0        error specific to source
  */
-int spid_source_add(struct spid *spid, spid_source_t type, label_t label, const char *args);
+int spi_source_add(struct spi *spi, spi_source_t type, spi_label_t label, const char *args);
 
-/** Make one iteration of the main spid loop
+/** Make one iteration of the main spi loop
  * @retval  0        success
  * @retval -1        temporary error
  * @retval  1        permanent error
  */
-int spid_loop(struct spid *spid);
+int spi_loop(struct spi *spi);
 
-/** Announce a spid event
- * @param evname     spid event name (referenced)
+/** Announce a spi event
+ * @param evname     spi event name (referenced)
  * @param delay_ms   delay in miliseconds before delivering the event
  * @param arg        opaque data specific to given event
  * @param argfree    do mmatic_freeptr(arg) after event handling / ignoring
  */
-void spid_announce(struct spid *spid, const char *evname, uint32_t delay_ms, void *arg, bool argfree);
+void spi_announce(struct spi *spi, const char *evname, uint32_t delay_ms, void *arg, bool argfree);
 
-/** Subscribe to given spid event
- * @param evname     spid event name (referenced)
- * @param cb         event handler - receives code and data from spid_announce()
+/** Subscribe to given spi event
+ * @param evname     spi event name (referenced)
+ * @param cb         event handler - receives code and data from spi_announce()
  * @param aggregate  if true, ignore further events until the first one is handled
  */
-void spid_subscribe(struct spid *spid, const char *evname, spid_event_cb_t *cb, bool aggregate);
+void spi_subscribe(struct spi *spi, const char *evname, spi_event_cb_t *cb, bool aggregate);
 
-/** Stop spid main loop
+/** Stop spi main loop
  * @param  0         success
  * @param -1         error occured
  */
-int spid_stop(struct spid *spid);
+int spi_stop(struct spi *spi);
 
-/** Free spid memory, close all resources, etc */
-void spid_free(struct spid *spid);
+/** Free spi memory, close all resources, etc */
+void spi_free(struct spi *spi);
 
 #endif

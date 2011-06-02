@@ -1,12 +1,12 @@
 /*
- * spid: Statistical Packet Inspection: KISS PLUS classifier
+ * spi: Statistical Packet Inspection: KISS PLUS classifier
  * Copyright (C) 2011 Paweł Foremski <pawel@foremski.pl>
  * This software is licensed under GNU GPL version 3
  */
 
 #include <math.h>
 #include "datastructures.h"
-#include "spid.h"
+#include "spi.h"
 #include "kissp.h"
 #include "ep.h"
 
@@ -17,9 +17,9 @@ static void _linear_print_func(const char *msg)
 	dbg(9, "liblinear: %s", msg);
 }
 
-static void _linear_init(struct spid *spid)
+static void _linear_init(struct spi *spi)
 {
-	struct kissp *kissp = spid->cdata;
+	struct kissp *kissp = spi->cdata;
 
 	/* set parameters (TODO?) */
 	kissp->as.linear.params.solver_type = L2R_L2LOSS_SVC_DUAL;
@@ -30,9 +30,9 @@ static void _linear_init(struct spid *spid)
 	set_print_string_function(_linear_print_func);
 }
 
-static void _linear_train(struct spid *spid)
+static void _linear_train(struct spi *spi)
 {
-	struct kissp *kissp = spid->cdata;
+	struct kissp *kissp = spi->cdata;
 	struct problem p;
 	struct signature *s;
 	int i;
@@ -41,12 +41,12 @@ static void _linear_train(struct spid *spid)
 	/* describe the problem */
 	p.l = tlist_count(kissp->traindata);
 
-	p.n = spid->options.N * 2;
+	p.n = spi->options.N * 2;
 	if (kissp->options.pktstats)
 		p.n += 3;
 
-	p.x = mmatic_alloc(spid->mm, (sizeof (void *)) * p.l);
-	p.y = mmatic_alloc(spid->mm, (sizeof (int)) * p.l);
+	p.x = mmatic_alloc(spi->mm, (sizeof (void *)) * p.l);
+	p.y = mmatic_alloc(spi->mm, (sizeof (int)) * p.l);
 
 	i = 0;
 	tlist_iter_loop(kissp->traindata, s) {
@@ -79,17 +79,17 @@ static void _linear_train(struct spid *spid)
 	mmatic_freeptr(p.y);
 }
 
-static void _linear_predict(struct spid *spid, struct signature *sign, struct ep *ep)
+static void _linear_predict(struct spi *spi, struct signature *sign, struct spi_ep *ep)
 {
-	struct kissp *kissp = spid->cdata;
-	struct classification_result *cr;
+	struct kissp *kissp = spi->cdata;
+	struct spi_classresult *cr;
 
 	if (!kissp->as.linear.model) {
 		dbg(1, "cant classify: no model\n");
 		return;
 	}
 
-	cr = mmatic_zalloc(spid->mm, sizeof *cr);
+	cr = mmatic_zalloc(spi->mm, sizeof *cr);
 	cr->ep = ep;
 
 	switch (kissp->as.linear.params.solver_type) {
@@ -104,11 +104,11 @@ static void _linear_predict(struct spid *spid, struct signature *sign, struct ep
 			break;
 	}
 
-	spid_announce(spid, "endpointClassification", 0, cr, true);
+	spi_announce(spi, "endpointClassification", 0, cr, true);
 }
 
 /********** libsvm */
-static void _svm_train(struct spid *spid)
+static void _svm_train(struct spi *spi)
 {
 	dbg(0, "TODO :)\n");
 }
@@ -125,12 +125,12 @@ static void _signature_free(void *arg)
 #define GV2I(group, value) (((group) * 16) + ((value) % 16))
 
 /** Compute window signature and eat packets */
-static struct signature *_signature_compute_eat(struct spid *spid, tlist *pkts)
+static struct signature *_signature_compute_eat(struct spi *spi, tlist *pkts)
 {
-	struct kissp *kissp = spid->cdata;
+	struct kissp *kissp = spi->cdata;
 	struct signature *sign; /** the resultant signature */
 	struct coordinate *c;   /** shortcut pointer inside sign->c[] */
-	struct pkt *pkt;
+	struct spi_pkt *pkt;
 	uint8_t *o;             /** table of occurances note: uint8_t because options.C < 256 */
 	int i, j, pktcnt;
 	double E;               /** expected number of occurances */
@@ -150,20 +150,20 @@ static struct signature *_signature_compute_eat(struct spid *spid, tlist *pkts)
 	double avgjitter = 0;   /** average jitter */
 	double avgsize = 0;     /** average packet size */
 
-	sign = mmatic_zalloc(spid->mm, sizeof *sign);
-	o = mmatic_zalloc(spid->mm, spid->options.N * 2 * 16); /* 2N groups, in each 16 groups */
-	delays = tlist_create(NULL, spid->mm);
+	sign = mmatic_zalloc(spi->mm, sizeof *sign);
+	o = mmatic_zalloc(spi->mm, spi->options.N * 2 * 16); /* 2N groups, in each 16 groups */
+	delays = tlist_create(NULL, spi->mm);
 
 	timerclear(&Tp);
 
 	/* 2N groups + 3 additional (size, delay and jitter) + 1 ending */
-	sign->c = mmatic_zalloc(spid->mm, sizeof(*sign->c) * (spid->options.N*2 + 3 + 1));
+	sign->c = mmatic_zalloc(spi->mm, sizeof(*sign->c) * (spi->options.N*2 + 3 + 1));
 
 	/* 1) count byte occurances in each of 2N groups
 	 * 2) compute approximate mean packet size
 	 * 3) determine approximate mean delay and its variance */
-	for (pktcnt = 0; pktcnt < spid->options.C && (pkt = tlist_shift(pkts)); pktcnt++) {
-		for (i = 0; i < spid->options.N; i++) {
+	for (pktcnt = 0; pktcnt < spi->options.C && (pkt = tlist_shift(pkts)); pktcnt++) {
+		for (i = 0; i < spi->options.N; i++) {
 			o[GV2I(2*i + 0, pkt->payload[i] & 0x0f)]++;
 			o[GV2I(2*i + 1, pkt->payload[i]   >> 4)]++;
 		}
@@ -192,7 +192,7 @@ static struct signature *_signature_compute_eat(struct spid *spid, tlist *pkts)
 	max = (pow(E - pktcnt, 2.0) + 15*pow(E - 0.0, 2.0)) / E;
 
 	/* for each group sum up the difference of occurance from expected value */
-	for (i = 0; i < spid->options.N * 2; i++) {
+	for (i = 0; i < spi->options.N * 2; i++) {
 		c = &sign->c[i];
 
 		c->index = i + 1;
@@ -203,7 +203,7 @@ static struct signature *_signature_compute_eat(struct spid *spid, tlist *pkts)
 	}
 
 	if (!kissp->options.pktstats) {
-		sign->c[spid->options.N * 2].index = -1;
+		sign->c[spi->options.N * 2].index = -1;
 	} else {
 		/* compute average delay and jitter, without outliers */
 		S = sqrt(S / pktcnt);        /* now its standard deviation */
@@ -243,7 +243,7 @@ static struct signature *_signature_compute_eat(struct spid *spid, tlist *pkts)
 			avgjitter /= 1000;
 
 		/* add packet stats as 3 last coordinates */
-		i = spid->options.N * 2;
+		i = spi->options.N * 2;
 
 		sign->c[i].index = i + 1;
 		sign->c[i].value = avgsize;
@@ -266,28 +266,28 @@ static struct signature *_signature_compute_eat(struct spid *spid, tlist *pkts)
 }
 
 /** Add given signature to training samples and schedule le-learning */
-static void _signature_add_train(struct spid *spid, struct signature *sign, label_t label)
+static void _signature_add_train(struct spi *spi, struct signature *sign, spi_label_t label)
 {
-	struct kissp *kissp = spid->cdata;
+	struct kissp *kissp = spi->cdata;
 
 	/* assign label to the sample and queue as a training sample */
 	sign->label = label;
 	tlist_push(kissp->traindata, sign);
 
 	/* update model with a delay so many training samples have chance to be queued */
-	spid_announce(spid, "kisspTraindataUpdated", SPI_TRAINING_DELAY, NULL, false);
+	spi_announce(spi, "kisspTraindataUpdated", SPI_TRAINING_DELAY, NULL, false);
 
 	return;
 }
 
 /********** event handlers, workers, etc */
-void _predict(struct spid *spid, struct signature *sign, struct ep *ep)
+void _predict(struct spi *spi, struct signature *sign, struct spi_ep *ep)
 {
-	struct kissp *kissp = spid->cdata;
+	struct kissp *kissp = spi->cdata;
 
 	switch (kissp->options.method) {
 		case KISSP_LIBLINEAR:
-			_linear_predict(spid, sign, ep);
+			_linear_predict(spi, sign, ep);
 			break;
 		case KISSP_LIBSVM:
 			dbg(0, "TODO :)\n");
@@ -296,19 +296,19 @@ void _predict(struct spid *spid, struct signature *sign, struct ep *ep)
 }
 
 /** Receives "endpointPacketsReady */
-static void _ep_ready(struct spid *spid, const char *evname, void *data)
+static void _ep_ready(struct spi *spi, const char *evname, void *data)
 {
-	struct ep *ep = data;
+	struct spi_ep *ep = data;
 	struct signature *sign;
 
-	while (tlist_count(ep->pkts) >= spid->options.C) {
-		sign = _signature_compute_eat(spid, ep->pkts);
+	while (tlist_count(ep->pkts) >= spi->options.C) {
+		sign = _signature_compute_eat(spi, ep->pkts);
 
 		/* if a labelled sample, learn from it */
 		if (ep->source->label != 0) {
-			_signature_add_train(spid, sign, ep->source->label);
+			_signature_add_train(spi, sign, ep->source->label);
 		} else {
-			_predict(spid, sign, ep);
+			_predict(spi, sign, ep);
 			_signature_free(sign);
 		}
 	}
@@ -317,51 +317,51 @@ static void _ep_ready(struct spid *spid, const char *evname, void *data)
 }
 
 /** Receives "kisspTraindataUpdated */
-void _train(struct spid *spid, const char *evname, void *data)
+void _train(struct spi *spi, const char *evname, void *data)
 {
-	struct kissp *kissp = spid->cdata;
+	struct kissp *kissp = spi->cdata;
 
 	dbg(1, "training with %u samples in traindata\n", tlist_count(kissp->traindata));
 
 	switch (kissp->options.method) {
 		case KISSP_LIBLINEAR:
-			_linear_train(spid);
+			_linear_train(spi);
 			break;
 		case KISSP_LIBSVM:
-			_svm_train(spid);
+			_svm_train(spi);
 			break;
 	}
 }
 
 /**********/
 
-void kissp_init(struct spid *spid)
+void kissp_init(struct spi *spi)
 {
 	struct kissp *kissp;
 
 	/* subscribe to endpoints accumulating 80+ packets */
-	spid_subscribe(spid, "endpointPacketsReady", _ep_ready, false);
+	spi_subscribe(spi, "endpointPacketsReady", _ep_ready, false);
 
 	/* subscribe to new learning samples */
-	spid_subscribe(spid, "kisspTraindataUpdated", _train, true);
+	spi_subscribe(spi, "kisspTraindataUpdated", _train, true);
 
-	kissp = mmatic_zalloc(spid->mm, sizeof *kissp);
-	kissp->traindata = tlist_create(_signature_free, spid->mm);
-	spid->cdata = kissp;
+	kissp = mmatic_zalloc(spi->mm, sizeof *kissp);
+	kissp->traindata = tlist_create(_signature_free, spi->mm);
+	spi->cdata = kissp;
 
 	/* TODO: let for choosing options */
 	kissp->options.pktstats = true;
 	kissp->options.method = KISSP_LIBLINEAR;
-	_linear_init(spid);
+	_linear_init(spi);
 }
 
-void kissp_free(struct spid *spid)
+void kissp_free(struct spi *spi)
 {
-	struct kissp *kissp = spid->cdata;
+	struct kissp *kissp = spi->cdata;
 
 	tlist_free(kissp->traindata);
 	mmatic_freeptr(kissp);
-	spid->cdata = NULL;
+	spi->cdata = NULL;
 }
 
 

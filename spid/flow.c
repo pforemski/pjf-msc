@@ -1,5 +1,5 @@
 /*
- * spid: Statistical Packet Inspection
+ * spi: Statistical Packet Inspection
  * Copyright (C) 2011 Paweł Foremski <pawel@foremski.pl>
  * This software is licensed under GNU GPL version 3
  */
@@ -16,7 +16,7 @@
 #include "ep.h"
 #include "datastructures.h"
 
-static char *_k(struct source *source, proto_t proto, epaddr_t epa1, epaddr_t epa2)
+static char *_k(struct spi_source *source, spi_proto_t proto, spi_epaddr_t epa1, spi_epaddr_t epa2)
 {
 	static char key[] = "X-X-XXXxxxXXXxxxXXXXX-XXXxxxXXXxxxXXXXX";
 	snprintf(key, sizeof key, "%u-%u-%llu-%llu",
@@ -27,20 +27,20 @@ static char *_k(struct source *source, proto_t proto, epaddr_t epa1, epaddr_t ep
 
 /***********/
 
-void flow_destroy(struct flow *flow)
+void flow_destroy(struct spi_flow *flow)
 {
 	mmatic_freeptr(flow);
 }
 
-void flow_tcp_flags(struct source *source, epaddr_t epa1, epaddr_t epa2, struct tcphdr *tcp)
+void flow_tcp_flags(struct spi_source *source, spi_epaddr_t epa1, spi_epaddr_t epa2, struct tcphdr *tcp)
 {
-	struct flow *flow;
+	struct spi_flow *flow;
 	char *key;
 
 	epa_fix(&epa1, &epa2);
 
 	key = _k(source, SPI_PROTO_TCP, epa1, epa2);
-	flow = thash_get(source->spid->flows, key);
+	flow = thash_get(source->spi->flows, key);
 	if (!flow)
 		return;
 
@@ -57,31 +57,31 @@ void flow_tcp_flags(struct source *source, epaddr_t epa1, epaddr_t epa2, struct 
 	}
 }
 
-int flow_count(struct source *source, proto_t proto, epaddr_t epa1, epaddr_t epa2,
+int flow_count(struct spi_source *source, spi_proto_t proto, spi_epaddr_t epa1, spi_epaddr_t epa2,
 	const struct timeval *ts)
 {
-	struct spid *spid = source->spid;
-	struct flow *flow;
+	struct spi *spi = source->spi;
+	struct spi_flow *flow;
 	char *key;
 
 	epa_fix(&epa1, &epa2);
 
 	key = _k(source, proto, epa1, epa2);
-	flow = thash_get(spid->flows, key);
+	flow = thash_get(spi->flows, key);
 	if (!flow) {
-		flow = mmatic_zalloc(spid, sizeof *flow);
+		flow = mmatic_zalloc(spi, sizeof *flow);
 		flow->source = source;
 		flow->proto = proto;
 		flow->epa1 = epa1;
 		flow->epa2 = epa2;
-		thash_set(spid->flows, key, flow);
+		thash_set(spi->flows, key, flow);
 	}
 
 	memcpy(&flow->last, ts, sizeof(struct timeval));
 
 	flow->counter++;
 
-	/* NB: can generate spid event if counter >= 80 */
+	/* NB: can generate spi event if counter >= 80 */
 
 	return flow->counter;
 }

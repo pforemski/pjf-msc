@@ -1,5 +1,5 @@
 /*
- * spid: Statistical Packet Inspection: verdict issuer
+ * spi: Statistical Packet Inspection: verdict issuer
  * Copyright (C) 2011 Paweł Foremski <pawel@foremski.pl>
  * This software is licensed under GNU GPL version 3
  */
@@ -10,11 +10,11 @@
 #include "datastructures.h"
 
 /** Per-endpoint verdict data */
-struct ep_verdict {
+struct spi_ep_verdict {
 	/** type-dependent info */
 	union {
 		struct verdict_ep_emwa_t {
-			cprob_t cprob; /** histogram of verdicts over time: EWMA of class. probabilty for each label */
+			spi_cprob_t cprob; /** histogram of verdicts over time: EWMA of class. probabilty for each label */
 		} ewma;
 	} as;
 };
@@ -36,12 +36,12 @@ struct verdict {
 };
 
 /** Initialize verdict issuer */
-void verdict_init(struct spid *spid);
+void verdict_init(struct spi *spi);
 
 /** Deinitialize and free memory */
-void verdict_free(struct spid *spid);
+void verdict_free(struct spi *spi);
 
 /** Handler for new endpoint classification results */
-void verdict_new_classification(struct spid *spid, const char *evname, void *arg);
+void verdict_new_classification(struct spi *spi, const char *evname, void *arg);
 
 #endif

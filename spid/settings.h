@@ -1,5 +1,5 @@
 /*
- * spid: Statistical Packet Inspection
+ * spi: Statistical Packet Inspection
  * Paweł Foremski <pawel@foremski.pl> 2011
  * This software is licensed under GNU GPL version 3
  */

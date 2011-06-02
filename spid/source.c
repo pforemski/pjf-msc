@@ -1,5 +1,5 @@
 /*
- * spid: Statistical Packet Inspection
+ * spi: Statistical Packet Inspection
  * Copyright (C) 2011 Paweł Foremski <pawel@foremski.pl>
  * This software is licensed under GNU GPL version 3
  */
@@ -17,7 +17,7 @@
 #include <netinet/udp.h>
 
 #include "source.h"
-#include "spid.h"
+#include "spi.h"
 #include "ep.h"
 #include "flow.h"
 
@@ -32,11 +32,11 @@ static int _pcap_err(pcap_t *pcap, const char *func)
 	return -1;
 }
 
-static int _pcap_add_filter(struct source *source, pcap_t *pcap, const char *filter)
+static int _pcap_add_filter(struct spi_source *source, pcap_t *pcap, const char *filter)
 {
 	struct bpf_program *cf;
 
-	cf = mmatic_alloc(source->spid->mm, sizeof *cf);
+	cf = mmatic_alloc(source->spi->mm, sizeof *cf);
 
 	if (!filter)
 		filter = SPI_PCAP_DEFAULT_FILTER;
@@ -50,7 +50,7 @@ static int _pcap_add_filter(struct source *source, pcap_t *pcap, const char *fil
 	return 0;
 }
 
-static void _parse_new_packet(struct source *source,
+static void _parse_new_packet(struct spi_source *source,
 	const struct timeval *tstamp, uint16_t pktlen, uint8_t *msg, uint16_t msglen)
 {
 #define PTROK(ptr, s) ((((uint8_t *) ptr) + (s) - msg) <= msglen)
@@ -61,8 +61,8 @@ static void _parse_new_packet(struct source *source,
 	struct udphdr *udp;
 
 	uint8_t *data;
-	proto_t proto;
-	epaddr_t epa1, epa2;
+	spi_proto_t proto;
+	spi_epaddr_t epa1, epa2;
 	int flowcount;
 
 	/* Ethernet */
@@ -140,18 +140,18 @@ static void _parse_new_packet(struct source *source,
 	}
 
 	/* payload */
-	if (!PTROK(data, source->spid->options.N)) {
+	if (!PTROK(data, source->spi->options.N)) {
 		dbg(12, "skipping too short packet (need %u bytes of payload, pktlen=%u, msglen=%u)\n",
-			source->spid->options.N, pktlen, msglen);
+			source->spi->options.N, pktlen, msglen);
 		return;
 	}
 
 	/* packet OK */
 	flowcount = flow_count(source, proto, epa1, epa2, tstamp);
 
-	if (proto == SPI_PROTO_TCP && flowcount > source->spid->options.P) {
+	if (proto == SPI_PROTO_TCP && flowcount > source->spi->options.P) {
 		dbg(12, "skipping TCP packet past %u first packets of TCP flow\n",
-			source->spid->options.P);
+			source->spi->options.P);
 		return;
 	}
 
@@ -162,7 +162,7 @@ static void _parse_new_packet(struct source *source,
 
 static void _pcap_callback(u_char *arg, const struct pcap_pkthdr *msginfo, const u_char *msg)
 {
-	struct source *source = (struct source *) arg;
+	struct spi_source *source = (struct spi_source *) arg;
 
 	source->counter++;
 
@@ -174,7 +174,7 @@ static void _pcap_callback(u_char *arg, const struct pcap_pkthdr *msginfo, const
 		if (source->as.file.gctime.tv_sec == 0) {
 			source->as.file.gctime.tv_sec = source->as.file.time.tv_sec;
 		} else if (source->as.file.gctime.tv_sec + SPI_GC_INTERVAL < source->as.file.time.tv_sec) {
-			spid_announce(source->spid, "gcSuggestion", 0, NULL, false);
+			spi_announce(source->spi, "gcSuggestion", 0, NULL, false);
 			source->as.file.gctime.tv_sec = source->as.file.time.tv_sec;
 		}
 	}
@@ -185,7 +185,7 @@ static void _pcap_callback(u_char *arg, const struct pcap_pkthdr *msginfo, const
 		(uint8_t *) msg, MIN(msginfo->caplen, msginfo->len));
 }
 
-static inline void _pcap_read(struct source *source, pcap_t *pcap)
+static inline void _pcap_read(struct spi_source *source, pcap_t *pcap)
 {
 	switch (pcap_dispatch(pcap, SPI_PCAP_MAX, _pcap_callback, (u_char *) source)) {
 		case 0:  /* no packets */
@@ -203,7 +203,7 @@ static inline void _pcap_read(struct source *source, pcap_t *pcap)
 	}
 }
 
-void source_destroy(struct source *source)
+void source_destroy(struct spi_source *source)
 {
 	switch (source->type) {
 		case SPI_SOURCE_FILE:
@@ -219,13 +219,13 @@ void source_destroy(struct source *source)
 
 /******/
 
-int source_file_init(struct source *source, const char *args)
+int source_file_init(struct spi_source *source, const char *args)
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
 	FILE *stream;
 	char *path, *filter;
 
-	path = mmatic_strdup(source->spid->mm, args);
+	path = mmatic_strdup(source->spi->mm, args);
 	filter = strchr(path, ' ');
 	if (filter) *filter++ = '\0';
 
@@ -250,11 +250,11 @@ int source_file_init(struct source *source, const char *args)
 
 void source_file_read(int fd, short evtype, void *arg)
 {
-	struct source *source = arg;
+	struct spi_source *source = arg;
 	_pcap_read(source, source->as.file.pcap);
 }
 
-void source_file_close(struct source *source)
+void source_file_close(struct spi_source *source)
 {
 	event_del(source->evread);
 	event_free(source->evread);
@@ -262,7 +262,7 @@ void source_file_close(struct source *source)
 	pcap_close(source->as.file.pcap);
 
 	source->as.file.time.tv_sec = -1;  /* = set virtual "now" to infinity */
-	spid_announce(source->spid, "gcSuggestion", 0, NULL, false);
+	spi_announce(source->spi, "gcSuggestion", 0, NULL, false);
 
 	dbg(1, "pcap file %s finished and closed (read %u packets)\n",
 		source->as.file.path, source->counter);
@@ -270,12 +270,12 @@ void source_file_close(struct source *source)
 
 /******/
 
-int source_sniff_init(struct source *source, const char *args)
+int source_sniff_init(struct spi_source *source, const char *args)
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
 	char *ifname, *filter;
 
-	ifname = mmatic_strdup(source->spid->mm, args);
+	ifname = mmatic_strdup(source->spi->mm, args);
 	filter = strchr(ifname, ' ');
 	if (filter) *filter++ = '\0';
 
@@ -294,7 +294,7 @@ int source_sniff_init(struct source *source, const char *args)
 
 void source_sniff_read(int fd, short evtype, void *arg)
 {
-	struct source *source = arg;
+	struct spi_source *source = arg;
 	source->counter++;
 	_pcap_read(source, source->as.sniff.pcap);
 }

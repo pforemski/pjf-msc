@@ -1,5 +1,5 @@
 /*
- * spid: Statistical Packet Inspection: verdict issuer
+ * spi: Statistical Packet Inspection: verdict issuer
  * Copyright (C) 2011 Paweł Foremski <pawel@foremski.pl>
  * This software is licensed under GNU GPL version 3
  */
@@ -7,10 +7,10 @@
 #include "datastructures.h"
 #include "settings.h"
 #include "verdict.h"
-#include "spid.h"
+#include "spi.h"
 #include "ep.h"
 
-void _simple_verdict(struct spid *spid, struct classification_result *cr)
+void _simple_verdict(struct spi *spi, struct spi_classresult *cr)
 {
 	cr->ep->verdict = cr->result;
 	cr->ep->verdict_prob = 1.0;
@@ -19,35 +19,35 @@ void _simple_verdict(struct spid *spid, struct classification_result *cr)
 
 /*****/
 
-void verdict_init(struct spid *spid)
+void verdict_init(struct spi *spi)
 {
 	struct verdict *v;
 
-	v = mmatic_zalloc(spid->mm, sizeof *v);
+	v = mmatic_zalloc(spi->mm, sizeof *v);
 	v->type = SPI_VERDICT_SIMPLE; /* TODO :) */
-	spid->vdata = v;
+	spi->vdata = v;
 
-	spid_subscribe(spid, "endpointClassification", verdict_new_classification, false);
+	spi_subscribe(spi, "endpointClassification", verdict_new_classification, false);
 }
 
-void verdict_free(struct spid *spid)
+void verdict_free(struct spi *spi)
 {
-	mmatic_freeptr(spid->vdata);
+	mmatic_freeptr(spi->vdata);
 	return;
 }
 
-void verdict_new_classification(struct spid *spid, const char *evname, void *arg)
+void verdict_new_classification(struct spi *spi, const char *evname, void *arg)
 {
-	struct verdict *v = spid->vdata;
-	struct classification_result *cr = arg;
-	label_t old_value;
+	struct verdict *v = spi->vdata;
+	struct spi_classresult *cr = arg;
+	spi_label_t old_value;
 
 	old_value = cr->ep->verdict;
 
 	/* update ep->verdict_prob and fetch new verdict value */
 	switch (v->type) {
 		case SPI_VERDICT_SIMPLE:
-			_simple_verdict(spid, cr);
+			_simple_verdict(spi, cr);
 			break;
 		case SPI_VERDICT_EWMA:
 			dbg(0, "TODO\n");
@@ -58,5 +58,5 @@ void verdict_new_classification(struct spid *spid, const char *evname, void *arg
 
 	/* announce verdict only if it changed */
 	if (old_value != cr->ep->verdict)
-		spid_announce(spid, "endpointVerdictChanged", 0, cr->ep, false);
+		spi_announce(spi, "endpointVerdictChanged", 0, cr->ep, false);
 }
