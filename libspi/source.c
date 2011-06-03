@@ -26,9 +26,9 @@
 #define UDP_EPA_SRC(ip, tcp) (((uint64_t) (ip)->ip_src.s_addr << 16) | ntohs((udp)->uh_sport))
 #define UDP_EPA_DST(ip, tcp) (((uint64_t) (ip)->ip_dst.s_addr << 16) | ntohs((udp)->uh_dport))
 
-static int _pcap_err(pcap_t *pcap, const char *func)
+static int _pcap_err(pcap_t *pcap, const char *func, const char *id)
 {
-	dbg(0, "%s: %s\n", func, pcap_geterr(pcap));
+	dbg(0, "%s: %s: %s\n", func, id, pcap_geterr(pcap));
 	return -1;
 }
 
@@ -42,10 +42,10 @@ static int _pcap_add_filter(struct spi_source *source, pcap_t *pcap, const char 
 		filter = SPI_PCAP_DEFAULT_FILTER;
 
 	if (pcap_compile(pcap, cf, filter, 0, 0) == -1)
-		return _pcap_err(pcap, "pcap_compile()");
+		return _pcap_err(pcap, "pcap_compile()", filter);
 
 	if (pcap_setfilter(pcap, cf) == -1)
-		return _pcap_err(pcap, "pcap_setfilter()");
+		return _pcap_err(pcap, "pcap_setfilter()", filter);
 
 	return 0;
 }
@@ -63,7 +63,7 @@ static void _parse_new_packet(struct spi_source *source,
 	uint8_t *data;
 	spi_proto_t proto;
 	spi_epaddr_t epa1, epa2;
-	int flowcount;
+	int flowcounter;
 
 	/* Ethernet */
 	eth = (struct ether_header *) msg;
@@ -147,9 +147,9 @@ static void _parse_new_packet(struct spi_source *source,
 	}
 
 	/* packet OK */
-	flowcount = flow_count(source, proto, epa1, epa2, tstamp);
+	flowcounter = flow_count(source, proto, epa1, epa2, tstamp);
 
-	if (proto == SPI_PROTO_TCP && flowcount > source->spi->options.P) {
+	if (proto == SPI_PROTO_TCP && flowcounter > source->spi->options.P) {
 		dbg(12, "skipping TCP packet past %u first packets of TCP flow\n",
 			source->spi->options.P);
 		return;
@@ -195,7 +195,12 @@ static inline void _pcap_read(struct spi_source *source, pcap_t *pcap)
 				dbg(1, "no packets available despite receiving an EV_READ event\n");
 			return;
 		case -1: /* error */
-			_pcap_err(pcap, "pcap_dispatch()");
+			if (source->type == SPI_SOURCE_FILE)
+				_pcap_err(pcap, "pcap_dispatch()", source->as.file.path);
+			else if (source->type == SPI_SOURCE_SNIFF)
+				_pcap_err(pcap, "pcap_dispatch()", source->as.sniff.ifname);
+			else
+				_pcap_err(pcap, "pcap_dispatch()", "a pcap source");
 			return;
 		case -2: /* break loop (?!) */
 			die("pcap_dispatch() returned -2\n");
@@ -264,8 +269,10 @@ void source_file_close(struct spi_source *source)
 	source->as.file.time.tv_sec = -1;  /* = set virtual "now" to infinity */
 	spi_announce(source->spi, "gcSuggestion", 0, NULL, false);
 
-	dbg(1, "pcap file %s finished and closed (read %u packets)\n",
-		source->as.file.path, source->counter);
+	dbg(1, "pcap file %s finished and closed\n",
+		source->as.file.path);
+	dbg(2, "  read %u packets, %u samples (learned %u), %u endpoints\n",
+		source->counter, source->samples, source->learned, source->eps);
 }
 
 /******/

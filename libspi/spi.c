@@ -63,9 +63,10 @@ static void _gc(int fd, short evtype, void *arg)
 	}
 }
 
-static void _gc_suggested(struct spi *spi, const char *evname, void *data)
+static bool _gc_suggested(struct spi *spi, const char *evname, void *data)
 {
 	_gc(0, 0, spi);
+	return true;
 }
 
 /** Handler for new spi events */
@@ -79,7 +80,8 @@ static void _new_spi_event(int fd, short evtype, void *arg)
 		thash_set(spi->aggstatus, se->evname, (void *) SPI_AGG_READY);
 
 	tlist_iter_loop(se->sl, ss) {
-		ss->handler(spi, se->evname, se->arg);
+		if (!ss->handler(spi, se->evname, se->arg))
+			tlist_remove(se->sl);
 	}
 
 	if (se->argfree)

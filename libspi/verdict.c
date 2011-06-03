@@ -19,24 +19,7 @@ void _simple_verdict(struct spi *spi, struct spi_classresult *cr)
 
 /*****/
 
-void verdict_init(struct spi *spi)
-{
-	struct verdict *v;
-
-	v = mmatic_zalloc(spi->mm, sizeof *v);
-	v->type = SPI_VERDICT_SIMPLE; /* TODO :) */
-	spi->vdata = v;
-
-	spi_subscribe(spi, "endpointClassification", verdict_new_classification, false);
-}
-
-void verdict_free(struct spi *spi)
-{
-	mmatic_freeptr(spi->vdata);
-	return;
-}
-
-void verdict_new_classification(struct spi *spi, const char *evname, void *arg)
+bool verdict_new_classification(struct spi *spi, const char *evname, void *arg)
 {
 	struct verdict *v = spi->vdata;
 	struct spi_classresult *cr = arg;
@@ -54,9 +37,30 @@ void verdict_new_classification(struct spi *spi, const char *evname, void *arg)
 			break;
 	}
 
-	dbg(5, "ep %s is %u\n", epa_print(cr->ep->epa), cr->ep->verdict);
+	dbg(9, "ep %s is %u\n", spi_epa2a(cr->ep->epa), cr->ep->verdict);
 
 	/* announce verdict only if it changed */
 	if (old_value != cr->ep->verdict)
 		spi_announce(spi, "endpointVerdictChanged", 0, cr->ep, false);
+
+	return true;
+}
+
+/*****/
+
+void verdict_init(struct spi *spi)
+{
+	struct verdict *v;
+
+	v = mmatic_zalloc(spi->mm, sizeof *v);
+	v->type = SPI_VERDICT_SIMPLE; /* TODO :) */
+	spi->vdata = v;
+
+	spi_subscribe(spi, "endpointClassification", verdict_new_classification, false);
+}
+
+void verdict_free(struct spi *spi)
+{
+	mmatic_freeptr(spi->vdata);
+	return;
 }

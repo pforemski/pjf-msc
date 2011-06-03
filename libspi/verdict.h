@@ -41,7 +41,4 @@ void verdict_init(struct spi *spi);
 /** Deinitialize and free memory */
 void verdict_free(struct spi *spi);
 
-/** Handler for new endpoint classification results */
-void verdict_new_classification(struct spi *spi, const char *evname, void *arg);
-
 #endif

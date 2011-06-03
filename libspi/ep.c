@@ -45,6 +45,8 @@ struct spi_ep *ep_new_pkt(struct spi_source *source, spi_proto_t proto, spi_epad
 		ep->proto = proto;
 		ep->epa = epa;
 		thash_set(spi->eps, key, ep);
+
+		source->eps++;
 	}
 
 	/* make packet */

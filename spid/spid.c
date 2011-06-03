@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Paweł Foremski <pawel@foremski.pl>
+* Copyright (C) 2011 Paweł Foremski <pawel@foremski.pl>
  * This software is licensed under GNU GPL version 3
  */
 
@@ -9,20 +9,37 @@
 
 #include "spid.h"
 
+/** Global spid object */
+struct spid *spid;
+
 /** Prints spid usage help screen */
 static void help(void)
 {
-	printf("Usage: spid [OPTIONS]\n");
+	printf("Usage: spid [OPTIONS] <traffic sources...>\n");
 	printf("\n");
 	printf("  Statistical Packet Inspection daemon\n");
 	printf("\n");
 	printf("Options:\n");
-	printf("  --verbose        be verbose (ie. --debug=5)\n");
-	printf("  --debug=<num>    set debugging level\n");
+	printf("  --learn=<lspec>  learn according to <lspec>:\n");
+	printf("                   protocol:file [filter]\n");
+	printf("                   protocol:interface [filter]\n");
+	printf("  --db=<path>      read learn database file, line by <line>:\n");
+	printf("                   protocol   file [filter]\n");
+	printf("                   protocol   interface [filter]\n");
+	printf("                   # this is comment, below does chdir(2)\n");
+	printf("                   !cd /dir/to/pcap/files\n");
 	printf("  --daemonize,-d   daemonize and syslog\n");
 	printf("  --pidfile=<path> where to write daemon PID to [%s]\n", SPID_PIDFILE);
+	printf("  --verbose        be verbose (ie. --debug=5)\n");
+	printf("  --debug=<num>    set debugging level\n");
 	printf("  --help,-h        show this usage help screen\n");
 	printf("  --version,-v     show version and copying information\n");
+	printf("\n");
+	printf("Add traffic sources for classification using <sspec>:\n");
+	printf("  wlan0            interface with default 'tcp or udp' filter\n");
+	printf("  \"wlan0 \"         interface without any filters\n");
+	printf("  \"wlan0 port 80\"  dump HTTP traffic\n");
+	printf("  ./file           pcap file, see above for filters\n");
 	return;
 }
 
@@ -35,25 +52,126 @@ static void version(void)
 	return;
 }
 
-/* temporary */
-static void add(struct spi *spi, const char *evname, void *arg)
+static void free_source(struct source *src)
 {
-	static int done = 0;
-
-	if (done)
-		return;
-	else
-		done = 1;
-
-	dbg(0, "adding dns3\n");
-	spi_source_add(spi, SPI_SOURCE_FILE, 0, "/home/pjf/makro/mgr/dumps/udp/dns3");
+	mmatic_freeptr(src->proto);
+	mmatic_freeptr(src->cmd);
 }
 
-/** Parses Command Line Arguments.
- * @retval 0     error, main() should exit (eg. wrong arg. given)
- * @retval 1     all ok
- * @retval 2     ok, but main() should exit (eg. on --version or --help) */
-static int parse_argv(struct spid *spid, int argc, char *argv[])
+static spi_label_t proto_label(const char *proto)
+{
+	spi_label_t label;
+
+	if (!proto || !proto[0])
+		return 0;
+
+	label = thash_get_uint(spid->proto2label, proto);
+
+	/* register */
+	if (label == 0) {
+		label = ++spid->label_count;
+		thash_set_uint(spid->proto2label, proto, label);
+		thash_uint_set(spid->label2proto, label, mmatic_strdup(spid->mm, proto));
+	}
+
+	return label;
+}
+
+static const char *label_proto(spi_label_t label)
+{
+	const char *proto;
+
+	if (label && (proto = thash_uint_get(spid->label2proto, label)))
+		return proto;
+	else
+		return "unknown";
+}
+
+static bool parse_lspec_into_sourcelist(char *arg, tlist *sources)
+{
+	char *s;
+	struct source *src;
+
+	s = strchr(arg, ':');
+	if (!s) {
+		dbg(0, "parsing <spec> '%s' failed: no semicolon\n", arg);
+		return false;
+	} else {
+		*s++ = '\0';
+	}
+
+	src = mmatic_zalloc(spid->mm, sizeof *src);
+	src->proto = mmatic_strdup(spid->mm, arg);
+	src->cmd = mmatic_strdup(spid->mm, s);
+
+	tlist_push(sources, src);
+	return true;
+}
+
+static void parse_sspec_into_sourcelist(char *arg, tlist *sources)
+{
+	struct source *src;
+
+	src = mmatic_zalloc(spid->mm, sizeof *src);
+	src->proto = NULL;
+	src->cmd = mmatic_strdup(spid->mm, arg);
+
+	tlist_push(sources, src);
+}
+
+static bool parse_dbfile_into_sourcelist(const char *path, tlist *sources)
+{
+	FILE *fp;
+	char buf[BUFSIZ], *s, *p;
+	int line = 0;
+	struct source *src;
+
+	fp = fopen(path, "r");
+	if (!fp) {
+		dbg(0, "opening db file '%s' failed: %s\n", path, strerror(errno));
+		return false;
+	}
+
+	while (fgets(buf, sizeof buf, fp)) {
+		line++;
+
+		if (!buf[0] || buf[0] == '\n' || buf[0] == '#')
+			continue;
+
+		/* find argument after spaces */
+		s = strchr(buf, ' ');
+		if (!s) {
+			dbg(0, "parsing db file '%s' failed: line %d: syntax error\n", path, line);
+			goto fail;
+		} else {
+			*s++ = '\0';
+			while (isspace(*s)) s++;
+		}
+
+		/* remove newline char */
+		p = strchr(s, '\n');
+		if (p) *p = '\0';
+
+		src = mmatic_zalloc(spid->mm, sizeof *src);
+		src->proto = mmatic_strdup(spid->mm, buf);
+		src->cmd = mmatic_strdup(spid->mm, s);
+
+		tlist_push(sources, src);
+	}
+
+	fclose(fp);
+	return true;
+
+fail:
+	fclose(fp);
+	return false;
+}
+
+/** Parses config
+ * @retval 0     all ok
+ * @retval 1     ok, but main() should exit (eg. on --version or --help)
+ * @retval 2     error, main() should exit (eg. wrong arg. given) */
+static int parse_config(int argc, char *argv[])
 {
 	int i, c;
 
@@ -66,6 +184,8 @@ static int parse_argv(struct spid *spid, int argc, char *argv[])
 		{ "version",    0, NULL,  4  },
 		{ "daemonize",  0, NULL,  5  },
 		{ "pidfile",    1, NULL,  6  },
+		{ "learn",      1, NULL,  7  },
+		{ "db",         1, NULL,  8  },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -86,48 +206,119 @@ static int parse_argv(struct spid *spid, int argc, char *argv[])
 			case  1 : debug = 5; break;
 			case  2 : debug = atoi(optarg); break;
 			case 'h':
-			case  3 : help(); return 2;
+			case  3 : help(); return 1;
 			case 'v':
-			case  4 : version(); return 2;
+			case  4 : version(); return 1;
 			case 'd':
 			case  5 : spid->options.daemonize = true; break;
 			case  6 : spid->options.pidfile = optarg; break;
-			default: help(); return 0;
+			case  7 :
+				if (!parse_lspec_into_sourcelist(optarg, spid->learn))
+					return 2;
+				else
+					break;
+			case  8 :
+				if (!parse_dbfile_into_sourcelist(optarg, spid->learn))
+					return 2;
+				else
+					break;
+			default: help(); return 2;
 		}
 	}
 
-	spid->spi = spi_init(&spid->spi_opts);
+	if (argc - optind < 1) {
+		dbg(0, "Not enough arguments\n");
+		help();
+		return 2;
+	}
 
-	/* TODO: learning sources */
-	if (spi_source_add(spid->spi, SPI_SOURCE_FILE, 1, "/home/pjf/makro/mgr/dumps/udp/dns2"))
-		return 0;
+	while (argc - optind > 0) {
+		parse_sspec_into_sourcelist(argv[optind], spid->detect);
+		optind++;
+	}
 
-	if (spi_source_add(spid->spi, SPI_SOURCE_FILE, 2, "/home/pjf/makro/mgr/dumps/udp/bittorrent2"))
-		return 0;
+	return 0;
+}
 
-	if (spi_source_add(spid->spi, SPI_SOURCE_FILE, 3, "/home/pjf/makro/mgr/dumps/udp/skype1"))
-		return 0;
+static bool start_sourcelist(tlist *sources)
+{
+	struct source *src;
+	int rc;
+	spi_source_t type;
 
-	if (spi_source_add(spid->spi, SPI_SOURCE_SNIFF, 0, "wlan0"))
-		return 0;
+	tlist_iter_loop(sources, src) {
+		switch (src->cmd[0]) {
+			case '/': case '.': case '~':
+				type = SPI_SOURCE_FILE;
+				break;
+			case '0': case '1': case '2': case '3': case '4':
+			case '5': case '6': case '7': case '8': case '9':
+				dbg(0, "TODO: source %s %s\n", src->proto, src->cmd);
+				continue;
+				//type = SPI_SOURCE_PTRACE;
+				break;
+			default:
+				type = SPI_SOURCE_SNIFF;
+				break;
+		}
 
-	/* TODO: add other files after learning (below is buggy) */
-	spi_subscribe(spid->spi, "kisspTraindataUpdated", add, true);
+		if ((rc = spi_source_add(spid->spi, type, proto_label(src->proto), src->cmd))) {
+			dbg(1, "starting source %s failed (rc=%d)\n", src->cmd, rc);
+			return false;
+		}
+	}
 
-	return 1;
+	return true;
+}
+
+static bool start_detect_sources(struct spi *spi, const char *evname, void *arg)
+{
+	start_sourcelist(spid->detect);
+	return false; /* = unsubscribe */
+}
+
+/* TODO: actions */
+static bool verdict_changed(struct spi *spi, const char *evname, void *arg)
+{
+	struct spi_ep *ep = arg;
+
+	dbg(0, "%s %21s is %s\n",
+		spi_proto2a(ep->proto), spi_epa2a(ep->epa), label_proto(ep->verdict));
+	dbg(1, "  count %4u prob %g\n", ep->verdict_count, ep->verdict_prob);
+
+	return true;
 }
 
 int main(int argc, char *argv[])
 {
-	struct spid *spid;
 	mmatic *mm;
+	int rc;
 
+	/* init */
 	mm = mmatic_create();
 	spid = mmatic_zalloc(mm, sizeof *spid);
 	spid->mm = mm;
+	spid->proto2label = thash_create_strkey(NULL, mm);
+	spid->label2proto = thash_create_intkey(mmatic_freeptr, mm);
+	spid->learn = tlist_create(free_source, mm);
+	spid->detect = tlist_create(free_source, mm);
 
-	/* init */
-	switch (parse_argv(spid, argc, argv)) { case 0: return 1; case 2: return 0; }
+	/* parse arguments */
+	rc = parse_config(argc, argv);
+	if (rc) return (rc == 2);
+
+	/* init libspi and add learning sources */
+	spid->spi = spi_init(&spid->spi_opts);
+	if (!start_sourcelist(spid->learn))
+		return 2;
+
+	/* subscribe to the event when model is updated and treat it as
+	   the moment in which learning phase is kind of finished, so we can add
+	   sources for detection */
+	spi_subscribe(spid->spi, "classifierModelUpdated", start_detect_sources, true);
+
+	/* subscribe to the event of verdict change - point of possible actions */
+	spi_subscribe(spid->spi, "endpointVerdictChanged", verdict_changed, false);
 
 	if (spid->options.daemonize)
 		pjf_daemonize("spid", spid->options.pidfile);

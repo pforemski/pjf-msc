@@ -44,13 +44,15 @@ void flow_tcp_flags(struct spi_source *source, spi_epaddr_t epa1, spi_epaddr_t e
 	if (!flow)
 		return;
 
-	/* handle RST: close both sides */
+	/* FIXME */
+
+	/* handle RST */
 	if (tcp->th_flags & TH_RST) {
 		flow->rst++;
 		return;
 	}
 
-	/* handle FIN: close one side (lower is 1, higher is 2) */
+	/* handle FIN */
 	if (tcp->th_flags & TH_FIN) {
 		flow->fin++;
 		return;

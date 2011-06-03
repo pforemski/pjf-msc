@@ -7,6 +7,12 @@
 #ifndef _SPI_H_
 #define _SPI_H_
 
+#include <pcap.h>
+#define __FAVOR_BSD
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include "settings.h"
 #include "datastructures.h"
 
@@ -57,5 +63,19 @@ int spi_stop(struct spi *spi);
 
 /** Free spi memory, close all resources, etc */
 void spi_free(struct spi *spi);
+
+/** Print endpoint address in human-readable format */
+static inline const char *spi_epa2a(spi_epaddr_t epa)
+{
+	static char buf[] = "111.111.111.111:11111";
+	struct in_addr addr;
+
+	addr.s_addr = epa >> 16;
+	snprintf(buf, sizeof buf, "%s:%u", inet_ntoa(addr), (uint16_t) epa);
+	return buf;
+}
+
+/** Print protocol name */
+#define spi_proto2a(p) (p == SPI_PROTO_UDP ? "UDP" : "TCP")
 
 #endif

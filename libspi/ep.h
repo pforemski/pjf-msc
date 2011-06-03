@@ -7,12 +7,6 @@
 #ifndef _EP_H_
 #define _EP_H_
 
-#include <pcap.h>
-#define __FAVOR_BSD
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
 #include "datastructures.h"
 
 /** Fix endpoint addresses so that epa1 < epa2 */
@@ -23,17 +17,6 @@ static inline void epa_fix(spi_epaddr_t *epa1, spi_epaddr_t *epa2)
 		*epa2 = *epa1;
 		*epa1 = tmp;
 	}
-}
-
-/** Print endpoint address in human-readable format */
-static inline const char *epa_print(spi_epaddr_t epa)
-{
-	static char buf[] = "111.111.111.111:11111";
-	struct in_addr addr;
-
-	addr.s_addr = epa >> 16;
-	snprintf(buf, sizeof buf, "%s:%u", inet_ntoa(addr), (uint16_t) epa);
-	return buf;
 }
 
 /** Destroy endpoint memory */

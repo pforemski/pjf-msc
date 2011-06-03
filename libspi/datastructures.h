@@ -42,20 +42,24 @@ typedef enum {
  * @param spi               spi root
  * @param evname            spi event name
  * @param arg               event opaque data
+ * @retval false            unsubscribe the handler from spi event
  */
-typedef void spi_event_cb_t(struct spi *spi, const char *evname, void *arg);
+typedef bool spi_event_cb_t(struct spi *spi, const char *evname, void *arg);
 
 /************************************************************************/
 
 /** Traffic source */
 struct spi_source {
-	struct spi *spi;                   /** root node */
-	spi_source_t type;                 /** source type */
-	spi_label_t label;                 /** associated source label (for learning) */
+	struct spi *spi;                    /** root node */
+	spi_source_t type;                  /** source type */
+	spi_label_t label;                  /** associated source label (for learning) */
 
 	int fd;                             /** underlying fd to monitor for read() possibility */
 	struct event *evread;               /** fd read event */
-	int counter;                        /** packet counter */
+	unsigned int counter;               /** packet counter */
+	unsigned int samples;               /** number of samples found */
+	unsigned int learned;               /** samples used for learning */
+	unsigned int eps;                   /** number of endpoints */
 
 	/** internal data depending on type */
 	union {

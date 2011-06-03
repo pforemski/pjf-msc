@@ -75,6 +75,8 @@ static void _linear_train(struct spi *spi)
 		kissp->as.linear.model->nr_class,
 		kissp->as.linear.model->nr_feature);
 
+	spi_announce(spi, "classifierModelUpdated", 0, NULL, false);
+
 	mmatic_freeptr(p.x);
 	mmatic_freeptr(p.y);
 }
@@ -296,17 +298,19 @@ void _predict(struct spi *spi, struct signature *sign, struct spi_ep *ep)
 }
 
 /** Receives "endpointPacketsReady */
-static void _ep_ready(struct spi *spi, const char *evname, void *data)
+static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 {
 	struct spi_ep *ep = data;
 	struct signature *sign;
 
 	while (tlist_count(ep->pkts) >= spi->options.C) {
 		sign = _signature_compute_eat(spi, ep->pkts);
+		ep->source->samples++;
 
 		/* if a labelled sample, learn from it */
 		if (ep->source->label != 0) {
 			_signature_add_train(spi, sign, ep->source->label);
+			ep->source->learned++;
 		} else {
 			_predict(spi, sign, ep);
 			_signature_free(sign);
@@ -314,10 +318,11 @@ static void _ep_ready(struct spi *spi, const char *evname, void *data)
 	}
 
 	ep->pending = false;
+	return true;
 }
 
 /** Receives "kisspTraindataUpdated */
-void _train(struct spi *spi, const char *evname, void *data)
+static bool _train(struct spi *spi, const char *evname, void *data)
 {
 	struct kissp *kissp = spi->cdata;
 
@@ -331,6 +336,8 @@ void _train(struct spi *spi, const char *evname, void *data)
 			_svm_train(spi);
 			break;
 	}
+
+	return true;
 }
 
 /**********/

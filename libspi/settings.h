@@ -39,6 +39,6 @@
 #define SPI_EP_TIMEOUT 300
 
 /** Delay in ms between registering first training sample and actual training */
-#define SPI_TRAINING_DELAY 1000
+#define SPI_TRAINING_DELAY 3000
 
 #endif
