@@ -8,7 +8,6 @@ TODO
 ====
 
 * libspi
-  * review the flow/endpoint closing code - especially in context of learning files
   * make the samples/model the storage, using pcap files to train libspi each time is not nice
     * shared, multiaccess storage could enable parallel spid operation
   * implement SVM

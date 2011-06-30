@@ -16,13 +16,26 @@
 #include "ep.h"
 #include "datastructures.h"
 
-static char *_k(struct spi_source *source, spi_proto_t proto, spi_epaddr_t epa1, spi_epaddr_t epa2)
+static inline char *_k(struct spi_source *source, spi_proto_t proto, spi_epaddr_t src, spi_epaddr_t dst)
 {
 	static char key[] = "X-X-XXXxxxXXXxxxXXXXX-XXXxxxXXXxxxXXXXX";
+
 	snprintf(key, sizeof key, "%u-%u-%llu-%llu",
-		(source->type == SPI_SOURCE_FILE) ? source->fd : 0,
-		proto, epa1, epa2);
+			(source->type == SPI_SOURCE_FILE) ? source->fd : 0,
+			proto, MIN(src, dst), MAX(src, dst));
+
 	return key;
+}
+
+static inline struct spi_flow *_get_flow(struct spi_source *source, spi_proto_t proto, spi_epaddr_t src, spi_epaddr_t dst)
+{
+	return thash_get(source->spi->flows, _k(source, proto, src, dst));
+}
+
+static inline void _set_flow(struct spi_source *source, spi_proto_t proto,
+	spi_epaddr_t src, spi_epaddr_t dst, struct spi_flow *flow)
+{
+	thash_set(source->spi->flows, _k(source, proto, src, dst), flow);
 }
 
 /***********/
@@ -32,51 +45,42 @@ void flow_destroy(struct spi_flow *flow)
 	mmatic_freeptr(flow);
 }
 
-void flow_tcp_flags(struct spi_source *source, spi_epaddr_t epa1, spi_epaddr_t epa2, struct tcphdr *tcp)
+void flow_tcp_flags(struct spi_source *source, spi_epaddr_t src, spi_epaddr_t dst, struct tcphdr *tcp)
 {
 	struct spi_flow *flow;
-	char *key;
 
-	epa_fix(&epa1, &epa2);
-
-	key = _k(source, SPI_PROTO_TCP, epa1, epa2);
-	flow = thash_get(source->spi->flows, key);
+	flow = _get_flow(source, SPI_PROTO_TCP, src, dst);
 	if (!flow)
 		return;
 
-	/* FIXME */
-
 	/* handle RST */
 	if (tcp->th_flags & TH_RST) {
-		flow->rst++;
+		flow->rst |= 1 + (src > dst);
 		return;
 	}
 
 	/* handle FIN */
 	if (tcp->th_flags & TH_FIN) {
 		flow->fin++;
+		flow->fin |= 1 + (src > dst);
 		return;
 	}
 }
 
-int flow_count(struct spi_source *source, spi_proto_t proto, spi_epaddr_t epa1, spi_epaddr_t epa2,
+int flow_count(struct spi_source *source, spi_proto_t proto, spi_epaddr_t src, spi_epaddr_t dst,
 	const struct timeval *ts)
 {
 	struct spi *spi = source->spi;
 	struct spi_flow *flow;
-	char *key;
 
-	epa_fix(&epa1, &epa2);
-
-	key = _k(source, proto, epa1, epa2);
-	flow = thash_get(spi->flows, key);
+	flow = _get_flow(source, proto, src, dst);
 	if (!flow) {
 		flow = mmatic_zalloc(spi, sizeof *flow);
 		flow->source = source;
 		flow->proto = proto;
-		flow->epa1 = epa1;
-		flow->epa2 = epa2;
-		thash_set(spi->flows, key, flow);
+		flow->epa1 = MIN(src, dst);
+		flow->epa2 = MAX(src, dst);
+		_set_flow(source, proto, src, dst, flow);
 	}
 
 	memcpy(&flow->last, ts, sizeof(struct timeval));

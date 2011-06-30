@@ -62,7 +62,7 @@ static void _parse_new_packet(struct spi_source *source,
 
 	uint8_t *data;
 	spi_proto_t proto;
-	spi_epaddr_t epa1, epa2;
+	spi_epaddr_t src, dst;
 	int flowcounter;
 
 	/* Ethernet */
@@ -109,11 +109,11 @@ static void _parse_new_packet(struct spi_source *source,
 			}
 
 			proto = SPI_PROTO_TCP;
-			epa1 = TCP_EPA_SRC(ip, tcp);
-			epa2 = TCP_EPA_DST(ip, tcp);
+			src = TCP_EPA_SRC(ip, tcp);
+			dst = TCP_EPA_DST(ip, tcp);
 
 			/* catch FIN/RST flags ASAP */
-			flow_tcp_flags(source, epa1, epa2, tcp);
+			flow_tcp_flags(source, src, dst, tcp);
 
 			data = ((uint8_t *) tcp) + tcp->th_off * 4;
 			break;
@@ -126,8 +126,8 @@ static void _parse_new_packet(struct spi_source *source,
 			}
 
 			proto = SPI_PROTO_UDP;
-			epa1 = UDP_EPA_SRC(ip, udp);
-			epa2 = UDP_EPA_DST(ip, udp);
+			src = UDP_EPA_SRC(ip, udp);
+			dst = UDP_EPA_DST(ip, udp);
 
 			data = ((uint8_t *) udp) + sizeof *udp;
 			break;
@@ -147,7 +147,7 @@ static void _parse_new_packet(struct spi_source *source,
 	}
 
 	/* packet OK */
-	flowcounter = flow_count(source, proto, epa1, epa2, tstamp);
+	flowcounter = flow_count(source, proto, src, dst, tstamp);
 
 	if (proto == SPI_PROTO_TCP && flowcounter > source->spi->options.P) {
 		dbg(12, "skipping TCP packet past %u first packets of TCP flow\n",
@@ -156,8 +156,8 @@ static void _parse_new_packet(struct spi_source *source,
 	}
 
 	/* TODO: add at one endpoint? */
-	ep_new_pkt(source, proto, epa1, tstamp, data, pktlen);
-	ep_new_pkt(source, proto, epa2, tstamp, data, pktlen);
+	ep_new_pkt(source, proto, src, tstamp, data, pktlen);
+	ep_new_pkt(source, proto, dst, tstamp, data, pktlen);
 }
 
 static void _pcap_callback(u_char *arg, const struct pcap_pkthdr *msginfo, const u_char *msg)

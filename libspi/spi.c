@@ -39,6 +39,13 @@ static void _gc(int fd, short evtype, void *arg)
 	gettimeofday(&systime, NULL);
 
 	thash_iter_loop(spi->flows, key, flow) {
+		/* drop all closed TCP connections */
+		if (flow->rst == 3 || flow->fin == 3) {
+			thash_set(spi->flows, key, NULL);
+			continue;
+		}
+
+		/* check timeout */
 		if (flow->source->type == SPI_SOURCE_FILE)
 			now = flow->source->as.file.time.tv_sec;
 		else

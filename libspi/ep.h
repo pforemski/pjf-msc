@@ -9,16 +9,6 @@
 
 #include "datastructures.h"
 
-/** Fix endpoint addresses so that epa1 < epa2 */
-static inline void epa_fix(spi_epaddr_t *epa1, spi_epaddr_t *epa2)
-{
-	if (*epa1 > *epa2) {
-		spi_epaddr_t tmp = *epa2;
-		*epa2 = *epa1;
-		*epa1 = tmp;
-	}
-}
-
 /** Destroy endpoint memory */
 void ep_destroy(struct spi_ep *ep);
 
