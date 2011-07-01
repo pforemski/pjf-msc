@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set="${1:-1}"
+cmd="./spid --db=db.conf ./test/$set.pcap"
+#echo "$cmd"
+
+time $cmd 2> ./test/last.txt
+if diff -u test/$set.txt test/last.txt; then
+	echo OK
+else
+	echo FAIL
+fi

@@ -210,12 +210,12 @@ static inline void _pcap_read(struct spi_source *source, pcap_t *pcap)
 
 void source_destroy(struct spi_source *source)
 {
-	switch (source->type) {
+	if (!source->closed) switch (source->type) {
 		case SPI_SOURCE_FILE:
-			pcap_close(source->as.file.pcap);
+			source_file_close(source);
 			break;
 		case SPI_SOURCE_SNIFF:
-			pcap_close(source->as.sniff.pcap);
+			source_sniff_close(source);
 			break;
 	}
 
@@ -261,8 +261,13 @@ void source_file_read(int fd, short evtype, void *arg)
 
 void source_file_close(struct spi_source *source)
 {
-	event_del(source->evread);
-	event_free(source->evread);
+	source->closed = true;
+
+	if (source->evread) {
+		event_del(source->evread);
+		event_free(source->evread);
+		source->evread = NULL;
+	}
 
 	pcap_close(source->as.file.pcap);
 
@@ -304,4 +309,22 @@ void source_sniff_read(int fd, short evtype, void *arg)
 	struct spi_source *source = arg;
 	source->counter++;
 	_pcap_read(source, source->as.sniff.pcap);
+}
+
+void source_sniff_close(struct spi_source *source)
+{
+	source->closed = true;
+
+	if (source->evread) {
+		event_del(source->evread);
+		event_free(source->evread);
+		source->evread = NULL;
+	}
+
+	pcap_close(source->as.sniff.pcap);
+
+	dbg(1, "sniff source %s finished and closed\n",
+		source->as.sniff.ifname);
+	dbg(2, "  read %u packets, %u samples (learned %u), %u endpoints\n",
+		source->counter, source->samples, source->learned, source->eps);
 }

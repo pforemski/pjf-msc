@@ -33,4 +33,7 @@ int source_sniff_init(struct spi_source *source, const char *args);
 /** Handle new packets on a live pcap sniffer source */
 void source_sniff_read(int fd, short evtype, void *arg);
 
+/** Close a sniff source */
+void source_sniff_close(struct spi_source *source);
+
 #endif

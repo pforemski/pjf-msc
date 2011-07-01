@@ -61,6 +61,8 @@ struct spi_source {
 	unsigned int learned;               /** samples used for learning */
 	unsigned int eps;                   /** number of endpoints */
 
+	bool closed;                        /** true if source is finished */
+
 	/** internal data depending on type */
 	union {
 		struct spi_source_file_t {
@@ -135,6 +137,7 @@ struct spi {
 	mmatic *mm;                         /** global mm */
 	struct spi_options options;         /** spi options */
 	bool running;                       /** true if in spi_loop() */
+	bool quitting;                      /** true if spi_stop() was called */
 
 	struct event_base *eb;              /** libevent root */
 	struct event *evgc;                 /** garbage collector event */

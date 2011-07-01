@@ -5,3 +5,6 @@
 /spid/spid
 *.swp
 /datasets/
+/spid/db.conf
+/spid/test/*.pcap
+/spid/test/*.txt

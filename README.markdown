@@ -13,6 +13,7 @@ TODO
   * implement SVM
   * implement EWMA verdict issuer
   * let for choosing classifier/verdict issuer and their options
+  * compute average size, IPT and jitter for both directions separately?
 * spid
   * sooner or later a real config file will be necessary :)
   * actions!
@@ -29,6 +30,7 @@ Subscribe to events with `spi_subscribe()`, announce with `spi_announce()`.
 * `endpointClassification(struct spi_classresult *cr)` - endpoint packets classified and new result ready
   for decision process
 * `endpointVerdictChanged(struct spi_ep *ep)` - verdict about classification changed for this endpoint
-* `kisspTraindataUpdated(void)` - learning samples queued, do the model database update
+* `classifierTraindataUpdated(void)` - learning samples queued, do the model database update
 * `classifierModelUpdated(void)` - some samples learned, the model database has changed
 * `gcSuggestion(void)` - running garbage collector suggested
+* `finished(void)` - all sources finished and no learning pending

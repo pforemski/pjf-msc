@@ -12,6 +12,9 @@
 
 #include "datastructures.h"
 
+/** Number of additional features in KISS+ vs KISS */
+#define SPI_KISSP_FEATURES 4
+
 /** Feature vector coordinate */
 struct coordinate {
 	int index;

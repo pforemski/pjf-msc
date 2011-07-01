@@ -43,7 +43,7 @@ static void _linear_train(struct spi *spi)
 
 	p.n = spi->options.N * 2;
 	if (kissp->options.pktstats)
-		p.n += 3;
+		p.n += SPI_KISSP_FEATURES;
 
 	p.x = mmatic_alloc(spi->mm, (sizeof (void *)) * p.l);
 	p.y = mmatic_alloc(spi->mm, (sizeof (int)) * p.l);
@@ -127,7 +127,7 @@ static void _signature_free(void *arg)
 #define GV2I(group, value) (((group) * 16) + ((value) % 16))
 
 /** Compute window signature and eat packets */
-static struct signature *_signature_compute_eat(struct spi *spi, tlist *pkts)
+static struct signature *_signature_compute_eat(struct spi *spi, struct spi_ep *ep)
 {
 	struct kissp *kissp = spi->cdata;
 	struct signature *sign; /** the resultant signature */
@@ -158,13 +158,14 @@ static struct signature *_signature_compute_eat(struct spi *spi, tlist *pkts)
 
 	timerclear(&Tp);
 
-	/* 2N groups + 3 additional (size, delay and jitter) + 1 ending */
-	sign->c = mmatic_zalloc(spi->mm, sizeof(*sign->c) * (spi->options.N*2 + 3 + 1));
+	/* 2N groups + additional + 1 ending */
+	sign->c = mmatic_zalloc(spi->mm,
+		sizeof(*sign->c) * (spi->options.N*2 + SPI_KISSP_FEATURES + 1));
 
 	/* 1) count byte occurances in each of 2N groups
 	 * 2) compute approximate mean packet size
 	 * 3) determine approximate mean delay and its variance */
-	for (pktcnt = 0; pktcnt < spi->options.C && (pkt = tlist_shift(pkts)); pktcnt++) {
+	for (pktcnt = 0; pktcnt < spi->options.C && (pkt = tlist_shift(ep->pkts)); pktcnt++) {
 		for (i = 0; i < spi->options.N; i++) {
 			o[GV2I(2*i + 0, pkt->payload[i] & 0x0f)]++;
 			o[GV2I(2*i + 1, pkt->payload[i]   >> 4)]++;
@@ -244,19 +245,27 @@ static struct signature *_signature_compute_eat(struct spi *spi, tlist *pkts)
 		else
 			avgjitter /= 1000;
 
-		/* add packet stats as 3 last coordinates */
+		/* write KISS+ features */
 		i = spi->options.N * 2;
 
+		/* average size */
 		sign->c[i].index = i + 1;
 		sign->c[i].value = avgsize;
 		i++;
 
+		/* average delay */
 		sign->c[i].index = i + 1;
 		sign->c[i].value = avgdelay;
 		i++;
 
+		/* average jitter */
 		sign->c[i].index = i + 1;
 		sign->c[i].value = avgjitter;
+		i++;
+
+		/* transmission protocol */
+		sign->c[i].index = i + 1;
+		sign->c[i].value = ep->proto;
 		i++;
 
 		sign->c[i].index = -1;
@@ -277,13 +286,13 @@ static void _signature_add_train(struct spi *spi, struct signature *sign, spi_la
 	tlist_push(kissp->traindata, sign);
 
 	/* update model with a delay so many training samples have chance to be queued */
-	spi_announce(spi, "kisspTraindataUpdated", SPI_TRAINING_DELAY, NULL, false);
+	spi_announce(spi, "classifierTraindataUpdated", SPI_TRAINING_DELAY, NULL, false);
 
 	return;
 }
 
-/********** event handlers, workers, etc */
-void _predict(struct spi *spi, struct signature *sign, struct spi_ep *ep)
+/** Make classification of given signature */
+static void _predict(struct spi *spi, struct signature *sign, struct spi_ep *ep)
 {
 	struct kissp *kissp = spi->cdata;
 
@@ -297,6 +306,8 @@ void _predict(struct spi *spi, struct signature *sign, struct spi_ep *ep)
 	}
 }
 
+/********** event handlers, workers, etc */
+
 /** Receives "endpointPacketsReady */
 static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 {
@@ -304,7 +315,7 @@ static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 	struct signature *sign;
 
 	while (tlist_count(ep->pkts) >= spi->options.C) {
-		sign = _signature_compute_eat(spi, ep->pkts);
+		sign = _signature_compute_eat(spi, ep);
 		ep->source->samples++;
 
 		/* if a labelled sample, learn from it */
@@ -321,7 +332,7 @@ static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 	return true;
 }
 
-/** Receives "kisspTraindataUpdated */
+/** Receives "classifierTraindataUpdated" */
 static bool _train(struct spi *spi, const char *evname, void *data)
 {
 	struct kissp *kissp = spi->cdata;
@@ -350,7 +361,7 @@ void kissp_init(struct spi *spi)
 	spi_subscribe(spi, "endpointPacketsReady", _ep_ready, false);
 
 	/* subscribe to new learning samples */
-	spi_subscribe(spi, "kisspTraindataUpdated", _train, true);
+	spi_subscribe(spi, "classifierTraindataUpdated", _train, true);
 
 	kissp = mmatic_zalloc(spi->mm, sizeof *kissp);
 	kissp->traindata = tlist_create(_signature_free, spi->mm);

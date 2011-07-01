@@ -37,6 +37,7 @@ int spi_source_add(struct spi *spi, spi_source_t type, spi_label_t label, const 
  * @retval  0        success
  * @retval -1        temporary error
  * @retval  1        permanent error
+ * @retval  2        spi_stop() called - quit
  */
 int spi_loop(struct spi *spi);
 
@@ -55,11 +56,11 @@ void spi_announce(struct spi *spi, const char *evname, uint32_t delay_ms, void *
  */
 void spi_subscribe(struct spi *spi, const char *evname, spi_event_cb_t *cb, bool aggregate);
 
-/** Stop spi main loop
- * @param  0         success
- * @param -1         error occured
- */
-int spi_stop(struct spi *spi);
+/** Check if spi event is pending for delivery */
+bool spi_pending(struct spi *spi, const char *evname);
+
+/** Stop spi main loop */
+void spi_stop(struct spi *spi);
 
 /** Free spi memory, close all resources, etc */
 void spi_free(struct spi *spi);

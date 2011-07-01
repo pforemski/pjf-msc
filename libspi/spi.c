@@ -35,6 +35,8 @@ static void _gc(int fd, short evtype, void *arg)
 	struct spi_ep *ep;
 	struct timeval systime;
 	uint32_t now;
+	int sources = 0, flows = 0, eps = 0;
+	struct spi_source *source;
 
 	gettimeofday(&systime, NULL);
 
@@ -53,12 +55,16 @@ static void _gc(int fd, short evtype, void *arg)
 
 		if (flow->last.tv_sec + SPI_FLOW_TIMEOUT < now)
 			thash_set(spi->flows, key, NULL);
+
+		flows++;
 	}
 
 	thash_iter_loop(spi->eps, key, ep) {
 		/* skip eps waiting for classification */
-		if (ep->pending)
+		if (ep->pending) {
+			eps++;
 			continue;
+		}
 
 		if (ep->source->type == SPI_SOURCE_FILE)
 			now = ep->source->as.file.time.tv_sec;
@@ -67,7 +73,21 @@ static void _gc(int fd, short evtype, void *arg)
 
 		if (ep->last.tv_sec + SPI_EP_TIMEOUT < now)
 			thash_set(spi->eps, key, NULL);
+
+		eps++;
 	}
+
+	tlist_iter_loop(spi->sources, source) {
+		if (source->closed)
+			continue;
+
+		sources++;
+	}
+
+	dbg(5, "gc: flows=%d, endpoints=%d, sources=%d\n", flows, eps, sources);
+
+	if (sources == 0 && !spi_pending(spi, "classifierTraindataUpdated"))
+		spi_announce(spi, "finished", 0, NULL, false);
 }
 
 static bool _gc_suggested(struct spi *spi, const char *evname, void *data)
@@ -83,7 +103,7 @@ static void _new_spi_event(int fd, short evtype, void *arg)
 	struct spi *spi = se->spi;
 	struct spi_subscriber *ss;
 
-	if (((int) thash_get(spi->aggstatus, se->evname)) == SPI_AGG_PENDING)
+	if (spi_pending(spi, se->evname))
 		thash_set(spi->aggstatus, se->evname, (void *) SPI_AGG_READY);
 
 	tlist_iter_loop(se->sl, ss) {
@@ -135,6 +155,7 @@ struct spi *spi_init(struct spi_options *so)
 	spi->evgc = event_new(spi->eb, -1, EV_PERSIST, _gc, spi);
 	event_add(spi->evgc, &tv);
 	spi_subscribe(spi, "gcSuggestion", _gc_suggested, true);
+	spi_subscribe(spi, "classifierModelUpdated", _gc_suggested, true);
 
 	/* NB: "new packet" events will be added by spi_source_add() */
 
@@ -190,6 +211,9 @@ int spi_loop(struct spi *spi)
 {
 	int rc;
 
+	if (spi->quitting)
+		return 2;
+
 	spi->running = true;
 	rc = event_base_loop(spi->eb, EVLOOP_ONCE);
 	spi->running = false;
@@ -197,10 +221,9 @@ int spi_loop(struct spi *spi)
 	return rc;
 }
 
-int spi_stop(struct spi *spi)
+void spi_stop(struct spi *spi)
 {
-	struct timeval tv = { 0, 0 };
-	return event_base_loopexit(spi->eb, &tv);
+	spi->quitting = true;
 }
 
 void spi_announce(struct spi *spi, const char *evname, uint32_t delay_ms, void *arg, bool argfree)
@@ -295,6 +318,11 @@ void spi_free(struct spi *spi)
 	tlist_free(spi->sources);
 
 	mmatic_free(spi->mm);
+}
+
+bool spi_pending(struct spi *spi, const char *evname)
+{
+	return (((int) thash_get(spi->aggstatus, evname)) == SPI_AGG_PENDING);
 }
 
 /*

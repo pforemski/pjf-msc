@@ -271,14 +271,27 @@ static bool start_sourcelist(tlist *sources)
 	return true;
 }
 
-static bool start_detect_sources(struct spi *spi, const char *evname, void *arg)
+static bool _spi_finished(struct spi *spi, const char *evname, void *arg)
 {
-	start_sourcelist(spid->detect);
-	return false; /* = unsubscribe */
+	static int state = 0;
+
+	switch (state) {
+		case 0:
+			/* start sources for detection */
+			start_sourcelist(spid->detect);
+			state++;
+			break;
+		case 1:
+			/* next signal means all done - quit */
+			spi_stop(spi);
+			return false;
+	}
+
+	return true;
 }
 
 /* TODO: actions */
-static bool verdict_changed(struct spi *spi, const char *evname, void *arg)
+static bool _verdict_changed(struct spi *spi, const char *evname, void *arg)
 {
 	struct spi_ep *ep = arg;
 
@@ -312,23 +325,21 @@ int main(int argc, char *argv[])
 	if (!start_sourcelist(spid->learn))
 		return 2;
 
-	/* subscribe to the event when model is updated and treat it as
-	   the moment in which learning phase is kind of finished, so we can add
-	   sources for detection */
-	spi_subscribe(spid->spi, "classifierModelUpdated", start_detect_sources, true);
+	/* treat it as the moment in which learning phase is finished, so we can add sources for detection */
+	spi_subscribe(spid->spi, "finished", _spi_finished, true);
 
 	/* subscribe to the event of verdict change - point of possible actions */
-	spi_subscribe(spid->spi, "endpointVerdictChanged", verdict_changed, false);
+	spi_subscribe(spid->spi, "endpointVerdictChanged", _verdict_changed, false);
 
 	if (spid->options.daemonize)
 		pjf_daemonize("spid", spid->options.pidfile);
 
-	while (spi_loop(spid->spi) == 0);
+	while ((rc = spi_loop(spid->spi)) == 0);
 
 	spi_free(spid->spi);
 	mmatic_free(mm);
 
-	return 1;
+	return (rc != 2);
 }
 
 /*
