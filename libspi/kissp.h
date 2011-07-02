@@ -15,22 +15,8 @@
 /** Number of additional features in KISS+ vs KISS */
 #define SPI_KISSP_FEATURES 4
 
-/** Feature vector coordinate */
-struct coordinate {
-	int index;
-	double value;
-};
-
-/** Represents feature vector - packet window signature */
-struct signature {
-	spi_label_t label;
-	struct coordinate *c;
-};
-
 /** Internal KISSP data */
 struct kissp {
-	tlist *traindata;        /** list of struct signature*: signatures with labels */
-
 	/** KISSP options */
 	struct {
 		bool pktstats;       /** use packet stats in signatures */

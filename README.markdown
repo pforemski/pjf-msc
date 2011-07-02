@@ -30,7 +30,7 @@ Subscribe to events with `spi_subscribe()`, announce with `spi_announce()`.
 * `endpointClassification(struct spi_classresult *cr)` - endpoint packets classified and new result ready
   for decision process
 * `endpointVerdictChanged(struct spi_ep *ep)` - verdict about classification changed for this endpoint
-* `classifierTraindataUpdated(void)` - learning samples queued, do the model database update
+* `traindataUpdated(void)` - new learning samples queued
 * `classifierModelUpdated(void)` - some samples learned, the model database has changed
 * `gcSuggestion(void)` - running garbage collector suggested
 * `finished(void)` - all sources finished and no learning pending

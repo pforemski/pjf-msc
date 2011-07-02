@@ -34,12 +34,12 @@ static void _linear_train(struct spi *spi)
 {
 	struct kissp *kissp = spi->cdata;
 	struct problem p;
-	struct signature *s;
+	struct spi_signature *s;
 	int i;
 	const char *err;
 
 	/* describe the problem */
-	p.l = tlist_count(kissp->traindata);
+	p.l = tlist_count(spi->traindata);
 
 	p.n = spi->options.N * 2;
 	if (kissp->options.pktstats)
@@ -49,7 +49,7 @@ static void _linear_train(struct spi *spi)
 	p.y = mmatic_alloc(spi->mm, (sizeof (int)) * p.l);
 
 	i = 0;
-	tlist_iter_loop(kissp->traindata, s) {
+	tlist_iter_loop(spi->traindata, s) {
 		p.x[i] = (struct feature_node *) s->c;   /* NB: identical */
 		p.y[i] = s->label;
 		i++;
@@ -81,7 +81,7 @@ static void _linear_train(struct spi *spi)
 	mmatic_freeptr(p.y);
 }
 
-static void _linear_predict(struct spi *spi, struct signature *sign, struct spi_ep *ep)
+static void _linear_predict(struct spi *spi, struct spi_signature *sign, struct spi_ep *ep)
 {
 	struct kissp *kissp = spi->cdata;
 	struct spi_classresult *cr;
@@ -116,22 +116,14 @@ static void _svm_train(struct spi *spi)
 }
 
 /********** signature generation */
-static void _signature_free(void *arg)
-{
-	struct signature *sign = arg;
-
-	mmatic_freeptr(sign->c);
-	mmatic_freeptr(sign);
-}
-
 #define GV2I(group, value) (((group) * 16) + ((value) % 16))
 
 /** Compute window signature and eat packets */
-static struct signature *_signature_compute_eat(struct spi *spi, struct spi_ep *ep)
+static struct spi_signature *_signature_compute_eat(struct spi *spi, struct spi_ep *ep)
 {
 	struct kissp *kissp = spi->cdata;
-	struct signature *sign; /** the resultant signature */
-	struct coordinate *c;   /** shortcut pointer inside sign->c[] */
+	struct spi_signature *sign; /** the resultant signature */
+	struct spi_coordinate *c;   /** shortcut pointer inside sign->c[] */
 	struct spi_pkt *pkt;
 	uint8_t *o;             /** table of occurances note: uint8_t because options.C < 256 */
 	int i, j, pktcnt;
@@ -273,26 +265,15 @@ static struct signature *_signature_compute_eat(struct spi *spi, struct spi_ep *
 
 	mmatic_freeptr(o);
 	tlist_free(delays);
+
+	if (ep->source->label)
+		sign->label = ep->source->label;
+
 	return sign;
 }
 
-/** Add given signature to training samples and schedule le-learning */
-static void _signature_add_train(struct spi *spi, struct signature *sign, spi_label_t label)
-{
-	struct kissp *kissp = spi->cdata;
-
-	/* assign label to the sample and queue as a training sample */
-	sign->label = label;
-	tlist_push(kissp->traindata, sign);
-
-	/* update model with a delay so many training samples have chance to be queued */
-	spi_announce(spi, "classifierTraindataUpdated", SPI_TRAINING_DELAY, NULL, false);
-
-	return;
-}
-
 /** Make classification of given signature */
-static void _predict(struct spi *spi, struct signature *sign, struct spi_ep *ep)
+static void _predict(struct spi *spi, struct spi_signature *sign, struct spi_ep *ep)
 {
 	struct kissp *kissp = spi->cdata;
 
@@ -306,25 +287,25 @@ static void _predict(struct spi *spi, struct signature *sign, struct spi_ep *ep)
 	}
 }
 
-/********** event handlers, workers, etc */
+/********** event handlers */
 
 /** Receives "endpointPacketsReady */
 static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 {
 	struct spi_ep *ep = data;
-	struct signature *sign;
+	struct spi_signature *sign;
 
 	while (tlist_count(ep->pkts) >= spi->options.C) {
 		sign = _signature_compute_eat(spi, ep);
 		ep->source->samples++;
 
 		/* if a labelled sample, learn from it */
-		if (ep->source->label != 0) {
-			_signature_add_train(spi, sign, ep->source->label);
+		if (sign->label) {
+			spi_train(spi, sign);
 			ep->source->learned++;
 		} else {
 			_predict(spi, sign, ep);
-			_signature_free(sign);
+			spi_signature_free(sign);
 		}
 	}
 
@@ -332,12 +313,12 @@ static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 	return true;
 }
 
-/** Receives "classifierTraindataUpdated" */
+/** Receives "traindataUpdated" */
 static bool _train(struct spi *spi, const char *evname, void *data)
 {
 	struct kissp *kissp = spi->cdata;
 
-	dbg(1, "training with %u samples in traindata\n", tlist_count(kissp->traindata));
+	dbg(1, "training with %u samples in traindata\n", tlist_count(spi->traindata));
 
 	switch (kissp->options.method) {
 		case KISSP_LIBLINEAR:
@@ -361,10 +342,9 @@ void kissp_init(struct spi *spi)
 	spi_subscribe(spi, "endpointPacketsReady", _ep_ready, false);
 
 	/* subscribe to new learning samples */
-	spi_subscribe(spi, "classifierTraindataUpdated", _train, true);
+	spi_subscribe(spi, "traindataUpdated", _train, true);
 
 	kissp = mmatic_zalloc(spi->mm, sizeof *kissp);
-	kissp->traindata = tlist_create(_signature_free, spi->mm);
 	spi->cdata = kissp;
 
 	/* TODO: let for choosing options */
@@ -377,7 +357,6 @@ void kissp_free(struct spi *spi)
 {
 	struct kissp *kissp = spi->cdata;
 
-	tlist_free(kissp->traindata);
 	mmatic_freeptr(kissp);
 	spi->cdata = NULL;
 }

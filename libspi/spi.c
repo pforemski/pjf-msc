@@ -86,7 +86,7 @@ static void _gc(int fd, short evtype, void *arg)
 
 	dbg(5, "gc: flows=%d, endpoints=%d, sources=%d\n", flows, eps, sources);
 
-	if (sources == 0 && !spi_pending(spi, "classifierTraindataUpdated"))
+	if (sources == 0 && !spi_pending(spi, "traindataUpdated"))
 		spi_announce(spi, "finished", 0, NULL, false);
 }
 
@@ -138,6 +138,7 @@ struct spi *spi_init(struct spi_options *so)
 	spi->flows = thash_create_strkey(flow_destroy, mm);
 	spi->subscribers = thash_create_strkey(tlist_free, mm);
 	spi->aggstatus = thash_create_strkey(NULL, mm);
+	spi->traindata = tlist_create(spi_signature_free, spi->mm);
 
 	/* options */
 	if (so)
@@ -311,6 +312,7 @@ void spi_free(struct spi *spi)
 	event_free(spi->evgc);
 	event_base_free(spi->eb);
 
+	tlist_free(spi->traindata);
 	thash_free(spi->aggstatus);
 	thash_free(spi->subscribers);
 	thash_free(spi->flows);
@@ -323,6 +325,24 @@ void spi_free(struct spi *spi)
 bool spi_pending(struct spi *spi, const char *evname)
 {
 	return (((int) thash_get(spi->aggstatus, evname)) == SPI_AGG_PENDING);
+}
+
+void spi_train(struct spi *spi, struct spi_signature *sign)
+{
+	tlist_push(spi->traindata, sign);
+
+	/* update model with a delay so many training samples have chance to be queued */
+	spi_announce(spi, "traindataUpdated", SPI_TRAINING_DELAY, NULL, false);
+
+	return;
+}
+
+void spi_signature_free(void *arg)
+{
+	struct spi_signature *sign = arg;
+
+	mmatic_freeptr(sign->c);
+	mmatic_freeptr(sign);
 }
 
 /*

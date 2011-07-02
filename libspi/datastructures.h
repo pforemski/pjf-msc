@@ -79,6 +79,15 @@ struct spi_source {
 	} as;
 };
 
+/** Represents window signature (C packets) */
+struct spi_signature {
+	spi_label_t label;
+	struct spi_coordinate {
+		int index;
+		double value;
+	} *c;
+};
+
 /** Represents information extracted from single packet */
 struct spi_pkt {
 	uint8_t *payload;                   /** payload */
@@ -151,6 +160,8 @@ struct spi {
 	tlist *sources;                     /** traffic sources: list of struct spi_source */
 	thash *eps;                         /** endpoints: struct spi_ep indexed by file_fd-proto-epa */
 	thash *flows;                       /** flows: struct spi_flow indexed by file_fd-proto-epa1-epa2 where epa1 < epa2 */
+
+	tlist *traindata;                   /** signatures for training: list of struct spi_signature */
 
 	void *cdata;                        /** classifiers private data */
 	void *vdata;                        /** verdict private data */
