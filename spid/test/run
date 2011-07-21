@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set="${1:-1}"
-cmd="./spid --db=db.conf ./test/$set.pcap"
+cmd="./spid --signdb=./test/signdb ./test/$set.pcap"
 echo "$cmd"
 
 time $cmd 2> ./test/last.txt

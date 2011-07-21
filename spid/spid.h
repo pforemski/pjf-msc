@@ -32,7 +32,14 @@ struct spid {
 	struct {
 		bool daemonize;            /** run in foreground? */
 		const char *pidfile;       /** PID file */
+		const char *signdb;        /** signature database file */
 	} options;
 };
+
+/** Return numeric label of given protocol name */
+spi_label_t proto_label(const char *proto);
+
+/** Return string protocol name of given numeric label */
+const char *label_proto(spi_label_t label);
 
 #endif

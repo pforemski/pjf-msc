@@ -88,14 +88,19 @@ static inline const char *spi_epa2a(spi_epaddr_t epa)
  */
 void spi_train(struct spi *spi, struct spi_signature *sign);
 
+/** Get traindata database
+ * @return a tlist of struct spi_signature
+ */
+tlist *spi_train_get(struct spi *spi);
+
 /** Add given signature to training samples queue, but don't run re-learning
  * @param sign                signature
  * @param label               protocol label
  */
-void spi_train_queue(struct spi *spi, struct spi_signature *sign);
+void spi_trainqueue_add(struct spi *spi, struct spi_signature *sign);
 
 /** Use the training samples queue and run re-learning immediately */
-void spi_train_commit(struct spi *spi);
+void spi_trainqueue_commit(struct spi *spi);
 
 /** Free a struct spi_signature
  * @param arg                 address to memory occupied by a struct spi_signature

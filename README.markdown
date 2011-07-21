@@ -8,8 +8,6 @@ TODO
 ====
 
 * libspi
-  * make the samples/model the storage, using pcap files to train libspi each time is not nice
-    * shared, multiaccess storage could enable parallel spid operation
   * implement SVM
   * implement EWMA verdict issuer
   * let for choosing classifier/verdict issuer and their options
@@ -34,4 +32,4 @@ Subscribe to events with `spi_subscribe()`, announce with `spi_announce()`.
 * `classifierModelUpdated(void)` - some samples learned, the model database has changed
 * `gcSuggestion(void)` - running garbage collector suggested
 * `sourceClosed(struct spi_source *src)` - source finished and closed
-* `finished(void)` - all sources finished, no learning pending and traindata queue empty
+* `finished(void)` - all sources finished, no learning pending and trainqueue empty

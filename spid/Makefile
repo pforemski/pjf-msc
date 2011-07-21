@@ -2,7 +2,7 @@ CFLAGS =
 LDFLAGS = -lspi
 
 ME=spid
-C_OBJECTS=spid.o
+C_OBJECTS=spid.o samplefile.o
 TARGETS=spid
 
 include rules.mk

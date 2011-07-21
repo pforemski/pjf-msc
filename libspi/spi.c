@@ -171,7 +171,7 @@ struct spi *spi_init(struct spi_options *so)
 	spi->subscribers = thash_create_strkey(_subscriber_free, mm);
 	spi->aggstatus = thash_create_strkey(NULL, mm);
 	spi->traindata = tlist_create(spi_signature_free, spi->mm);
-	spi->trainqueue = tlist_create(spi_signature_free, spi->mm);
+	spi->trainqueue = tlist_create(NULL, spi->mm); /* @1: dont free */
 
 	/* options */
 	if (so)
@@ -385,20 +385,26 @@ void spi_train(struct spi *spi, struct spi_signature *sign)
 	return;
 }
 
-void spi_train_queue(struct spi *spi, struct spi_signature *sign)
+void spi_trainqueue_add(struct spi *spi, struct spi_signature *sign)
 {
 	tlist_push(spi->trainqueue, sign);
 }
 
-void spi_train_commit(struct spi *spi)
+void spi_trainqueue_commit(struct spi *spi)
 {
 	struct spi_signature *sign;
 
 	tlist_iter_loop(spi->trainqueue, sign) {
-		tlist_push(spi->traindata, sign);
+		tlist_push(spi->traindata, sign); /* @1 */
 	}
 
+	tlist_flush(spi->trainqueue);
 	spi_announce(spi, "traindataUpdated", 0, NULL, false);
+}
+
+tlist *spi_train_get(struct spi *spi)
+{
+	return spi->traindata;
 }
 
 void spi_signature_free(void *arg)

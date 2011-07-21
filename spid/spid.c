@@ -8,6 +8,7 @@
 #include <libspi/spi.h>
 
 #include "spid.h"
+#include "samplefile.h"
 
 /** Global spid object */
 struct spid *spid;
@@ -23,11 +24,10 @@ static void help(void)
 	printf("  --learn=<lspec>  learn according to <lspec>:\n");
 	printf("                   protocol:file [filter]\n");
 	printf("                   protocol:interface [filter]\n");
-	printf("  --db=<path>      read learn database file, line by <line>:\n");
-	printf("                   protocol   file [filter]\n");
-	printf("                   protocol   interface [filter]\n");
-	printf("                   # this is comment, below does chdir(2)\n");
-	printf("                   !cd /dir/to/pcap/files\n");
+	printf("  --pktdb=<path>   read packets according to info in given <path>, line format:\n");
+	printf("                   protocol file [filter]\n");
+	printf("                   protocol interface [filter]\n");
+	printf("  --signdb=<path>  signature database file\n");
 	printf("  --daemonize,-d   daemonize and syslog\n");
 	printf("  --pidfile=<path> where to write daemon PID to [%s]\n", SPID_PIDFILE);
 	printf("  --verbose        be verbose (ie. --debug=5)\n");
@@ -58,7 +58,7 @@ static void free_source(struct source *src)
 	mmatic_freeptr(src->cmd);
 }
 
-static spi_label_t proto_label(const char *proto)
+spi_label_t proto_label(const char *proto)
 {
 	spi_label_t label;
 
@@ -77,7 +77,7 @@ static spi_label_t proto_label(const char *proto)
 	return label;
 }
 
-static const char *label_proto(spi_label_t label)
+const char *label_proto(spi_label_t label)
 {
 	const char *proto;
 
@@ -185,7 +185,8 @@ static int parse_config(int argc, char *argv[])
 		{ "daemonize",  0, NULL,  5  },
 		{ "pidfile",    1, NULL,  6  },
 		{ "learn",      1, NULL,  7  },
-		{ "db",         1, NULL,  8  },
+		{ "pktdb",      1, NULL,  8  },
+		{ "signdb",     1, NULL,  9  },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -222,6 +223,7 @@ static int parse_config(int argc, char *argv[])
 					return 2;
 				else
 					break;
+			case  9 : spid->options.signdb = mmatic_strdup(spid->mm, optarg); break;
 			default: help(); return 2;
 		}
 	}
@@ -322,8 +324,16 @@ int main(int argc, char *argv[])
 
 	/* init libspi and add learning sources */
 	spid->spi = spi_init(&spid->spi_opts);
+
 	if (!start_sourcelist(spid->learn))
 		return 2;
+
+	if (spid->options.signdb) {
+		if (sf_read(spid, spid->options.signdb) > 0)
+			spi_trainqueue_commit(spid->spi);
+	}
+
+	/* TODO: detect if no learning sources */
 
 	/* treat it as the moment in which learning phase is finished, so we can add sources for detection */
 	spi_subscribe(spid->spi, "finished", _spi_finished, true);
@@ -335,6 +345,11 @@ int main(int argc, char *argv[])
 		pjf_daemonize("spid", spid->options.pidfile);
 
 	while ((rc = spi_loop(spid->spi)) == 0);
+
+	if (spid->options.signdb) {
+		/* TODO: dont write if nothing new? */
+		sf_write(spid, spid->options.signdb);
+	}
 
 	spi_free(spid->spi);
 	mmatic_free(mm);
