@@ -28,6 +28,10 @@ static bool _check_if_finished(struct spi *spi, const char *evname, void *data)
 	if (spi_pending(spi, "traindataUpdated"))
 		return true;
 
+	/* traindata queue empty? */
+	if (tlist_count(spi->trainqueue) > 0)
+		return true;
+
 	/* are there open sources? */
 	tlist_iter_loop(spi->sources, source) {
 		if (!source->closed)
@@ -49,6 +53,7 @@ static void _subscriber_free(void *arg)
 
 	tlist_free(ss->hl);
 	tlist_free(ss->ahl);
+	mmatic_freeptr(ss);
 }
 
 /** Setup default options */
@@ -166,6 +171,7 @@ struct spi *spi_init(struct spi_options *so)
 	spi->subscribers = thash_create_strkey(_subscriber_free, mm);
 	spi->aggstatus = thash_create_strkey(NULL, mm);
 	spi->traindata = tlist_create(spi_signature_free, spi->mm);
+	spi->trainqueue = tlist_create(spi_signature_free, spi->mm);
 
 	/* options */
 	if (so)
@@ -353,6 +359,7 @@ void spi_free(struct spi *spi)
 	event_free(spi->evgc);
 	event_base_free(spi->eb);
 
+	tlist_free(spi->trainqueue);
 	tlist_free(spi->traindata);
 	thash_free(spi->aggstatus);
 	thash_free(spi->subscribers);
@@ -376,6 +383,22 @@ void spi_train(struct spi *spi, struct spi_signature *sign)
 	spi_announce(spi, "traindataUpdated", SPI_TRAINING_DELAY, NULL, false);
 
 	return;
+}
+
+void spi_train_queue(struct spi *spi, struct spi_signature *sign)
+{
+	tlist_push(spi->trainqueue, sign);
+}
+
+void spi_train_commit(struct spi *spi)
+{
+	struct spi_signature *sign;
+
+	tlist_iter_loop(spi->trainqueue, sign) {
+		tlist_push(spi->traindata, sign);
+	}
+
+	spi_announce(spi, "traindataUpdated", 0, NULL, false);
 }
 
 void spi_signature_free(void *arg)

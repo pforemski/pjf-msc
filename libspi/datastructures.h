@@ -162,6 +162,7 @@ struct spi {
 	thash *flows;                       /** flows: struct spi_flow indexed by file_fd-proto-epa1-epa2 where epa1 < epa2 */
 
 	tlist *traindata;                   /** signatures for training: list of struct spi_signature */
+	tlist *trainqueue;                  /** signatures to be added to traindata */
 
 	void *cdata;                        /** classifiers private data */
 	void *vdata;                        /** verdict private data */

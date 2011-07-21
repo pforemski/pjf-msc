@@ -82,11 +82,20 @@ static inline const char *spi_epa2a(spi_epaddr_t epa)
 /** Print protocol name */
 #define spi_proto2a(p) (p == SPI_PROTO_UDP ? "UDP" : "TCP")
 
-/** Add given signature to training samples and schedule le-learning
+/** Add given signature to training samples and schedule re-learning
  * @param sign                signature
  * @param label               protocol label
  */
 void spi_train(struct spi *spi, struct spi_signature *sign);
+
+/** Add given signature to training samples queue, but don't run re-learning
+ * @param sign                signature
+ * @param label               protocol label
+ */
+void spi_train_queue(struct spi *spi, struct spi_signature *sign);
+
+/** Use the training samples queue and run re-learning immediately */
+void spi_train_commit(struct spi *spi);
 
 /** Free a struct spi_signature
  * @param arg                 address to memory occupied by a struct spi_signature

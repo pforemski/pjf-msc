@@ -34,4 +34,4 @@ Subscribe to events with `spi_subscribe()`, announce with `spi_announce()`.
 * `classifierModelUpdated(void)` - some samples learned, the model database has changed
 * `gcSuggestion(void)` - running garbage collector suggested
 * `sourceClosed(struct spi_source *src)` - source finished and closed
-* `finished(void)` - all sources finished and no learning pending
+* `finished(void)` - all sources finished, no learning pending and traindata queue empty
