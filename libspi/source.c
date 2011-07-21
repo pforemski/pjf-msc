@@ -189,10 +189,7 @@ static inline void _pcap_read(struct spi_source *source, pcap_t *pcap)
 {
 	switch (pcap_dispatch(pcap, SPI_PCAP_MAX, _pcap_callback, (u_char *) source)) {
 		case 0:  /* no packets */
-			if (source->type == SPI_SOURCE_FILE)
-				source_file_close(source);
-			else
-				dbg(1, "no packets available despite receiving an EV_READ event\n");
+			source_close(source);
 			return;
 		case -1: /* error */
 			if (source->type == SPI_SOURCE_FILE)
@@ -208,9 +205,12 @@ static inline void _pcap_read(struct spi_source *source, pcap_t *pcap)
 	}
 }
 
-void source_destroy(struct spi_source *source)
+void source_close(struct spi_source *source)
 {
-	if (!source->closed) switch (source->type) {
+	if (source->closed)
+		return;
+
+	switch (source->type) {
 		case SPI_SOURCE_FILE:
 			source_file_close(source);
 			break;
@@ -219,6 +219,13 @@ void source_destroy(struct spi_source *source)
 			break;
 	}
 
+	spi_announce(source->spi, "gcSuggestion", 0, NULL, false);
+	spi_announce(source->spi, "sourceClosed", 0, source, false);
+}
+
+void source_destroy(struct spi_source *source)
+{
+	source_close(source);
 	mmatic_freeptr(source);
 }
 
@@ -270,12 +277,9 @@ void source_file_close(struct spi_source *source)
 	}
 
 	pcap_close(source->as.file.pcap);
-
 	source->as.file.time.tv_sec = -1;  /* = set virtual "now" to infinity */
-	spi_announce(source->spi, "gcSuggestion", 0, NULL, false);
 
-	dbg(1, "pcap file %s finished and closed\n",
-		source->as.file.path);
+	dbg(1, "pcap file %s finished and closed\n", source->as.file.path);
 	dbg(2, "  read %u packets, %u samples (learned %u), %u endpoints\n",
 		source->counter, source->samples, source->learned, source->eps);
 }
@@ -323,8 +327,7 @@ void source_sniff_close(struct spi_source *source)
 
 	pcap_close(source->as.sniff.pcap);
 
-	dbg(1, "sniff source %s finished and closed\n",
-		source->as.sniff.ifname);
+	dbg(1, "sniff source %s finished and closed\n", source->as.sniff.ifname);
 	dbg(2, "  read %u packets, %u samples (learned %u), %u endpoints\n",
 		source->counter, source->samples, source->learned, source->eps);
 }

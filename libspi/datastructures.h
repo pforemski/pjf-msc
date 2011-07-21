@@ -151,7 +151,7 @@ struct spi {
 	struct event_base *eb;              /** libevent root */
 	struct event *evgc;                 /** garbage collector event */
 
-	thash *subscribers;                 /** subscribers of spi events: thash of tlists of struct spi_subscriber */
+	thash *subscribers;                 /** subscribers of spi events: thash of struct spi_subscriber*/
 	thash *aggstatus;                   /** thash of int aggregation status: see SPI_AGG_* */
 #define SPI_AGG_IGNORE  0
 #define SPI_AGG_READY   1
@@ -167,17 +167,25 @@ struct spi {
 	void *vdata;                        /** verdict private data */
 };
 
+/** Used for conversion between a void pointer and an spi_event callback address */
+union spi_ptr2eventcb_tool {
+	void *ptr;
+	spi_event_cb_t *func;
+};
+
+/** represents listeners of spi events */
+struct spi_subscribers {
+	tlist *hl;                          /** handler list */
+	tlist *ahl;                         /** after handler list */
+};
+
 /** spi event representation */
 struct spi_event {
 	struct spi *spi;                    /** spi root */
 	const char *evname;                 /** event name */
-	tlist *sl;                          /** subscriber list */
+	struct spi_subscribers *ss;         /** subscribers */
 	void *arg;                          /** opaque data */
 	bool argfree;                       /** free arg after handler call */
-};
-
-struct spi_subscriber {
-	spi_event_cb_t *handler;           /** handler address */
 };
 
 #endif

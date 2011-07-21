@@ -56,6 +56,9 @@ void spi_announce(struct spi *spi, const char *evname, uint32_t delay_ms, void *
  */
 void spi_subscribe(struct spi *spi, const char *evname, spi_event_cb_t *cb, bool aggregate);
 
+/** Like spi_subscribe(), but run callback after ordinary handlers finish */
+void spi_subscribe_after(struct spi *spi, const char *evname, spi_event_cb_t *cb, bool aggregate);
+
 /** Check if spi event is pending for delivery */
 bool spi_pending(struct spi *spi, const char *evname);
 

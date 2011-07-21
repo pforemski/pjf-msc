@@ -9,6 +9,9 @@
 
 #include "datastructures.h"
 
+/** Close a packet source */
+void source_close(struct spi_source *source);
+
 /** Destroy source memory */
 void source_destroy(struct spi_source *source);
 

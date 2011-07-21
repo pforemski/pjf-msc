@@ -18,6 +18,39 @@
 #include "kissp.h"
 #include "verdict.h"
 
+/* Check if there is still something to do, otherwise announce "finished" */
+static bool _check_if_finished(struct spi *spi, const char *evname, void *data)
+{
+	struct spi_source *source;
+	int sources = 0;
+
+	/* still some traindata waiting to be used */
+	if (spi_pending(spi, "traindataUpdated"))
+		return true;
+
+	/* are there open sources? */
+	tlist_iter_loop(spi->sources, source) {
+		if (!source->closed)
+			sources++;
+	}
+
+	if (sources > 0)
+		return true;
+
+	/* everything ready */
+	spi_announce(spi, "finished", 0, NULL, false);
+
+	return true;
+}
+
+static void _subscriber_free(void *arg)
+{
+	struct spi_subscribers *ss = arg;
+
+	tlist_free(ss->hl);
+	tlist_free(ss->ahl);
+}
+
 /** Setup default options */
 static void _options_defaults(struct spi *spi)
 {
@@ -35,8 +68,7 @@ static void _gc(int fd, short evtype, void *arg)
 	struct spi_ep *ep;
 	struct timeval systime;
 	uint32_t now;
-	int sources = 0, flows = 0, eps = 0;
-	struct spi_source *source;
+	int flows = 0, eps = 0;
 
 	gettimeofday(&systime, NULL);
 
@@ -76,18 +108,6 @@ static void _gc(int fd, short evtype, void *arg)
 
 		eps++;
 	}
-
-	tlist_iter_loop(spi->sources, source) {
-		if (source->closed)
-			continue;
-
-		sources++;
-	}
-
-	dbg(5, "gc: flows=%d, endpoints=%d, sources=%d\n", flows, eps, sources);
-
-	if (sources == 0 && !spi_pending(spi, "traindataUpdated"))
-		spi_announce(spi, "finished", 0, NULL, false);
 }
 
 static bool _gc_suggested(struct spi *spi, const char *evname, void *data)
@@ -101,14 +121,21 @@ static void _new_spi_event(int fd, short evtype, void *arg)
 {
 	struct spi_event *se = arg;
 	struct spi *spi = se->spi;
-	struct spi_subscriber *ss;
+	union spi_ptr2eventcb_tool pf;
 
 	if (spi_pending(spi, se->evname))
 		thash_set(spi->aggstatus, se->evname, (void *) SPI_AGG_READY);
 
-	tlist_iter_loop(se->sl, ss) {
-		if (!ss->handler(spi, se->evname, se->arg))
-			tlist_remove(se->sl);
+	/* handler list */
+	tlist_iter_loop(se->ss->hl, pf.ptr) {
+		if (!pf.func(spi, se->evname, se->arg))
+			tlist_remove(se->ss->hl);
+	}
+
+	/* after handler list */
+	tlist_iter_loop(se->ss->ahl, pf.ptr) {
+		if (!pf.func(spi, se->evname, se->arg))
+			tlist_remove(se->ss->ahl);
 	}
 
 	if (se->argfree)
@@ -136,7 +163,7 @@ struct spi *spi_init(struct spi_options *so)
 	spi->sources = tlist_create(source_destroy, mm);
 	spi->eps = thash_create_strkey(ep_destroy, mm);
 	spi->flows = thash_create_strkey(flow_destroy, mm);
-	spi->subscribers = thash_create_strkey(tlist_free, mm);
+	spi->subscribers = thash_create_strkey(_subscriber_free, mm);
 	spi->aggstatus = thash_create_strkey(NULL, mm);
 	spi->traindata = tlist_create(spi_signature_free, spi->mm);
 
@@ -148,6 +175,7 @@ struct spi *spi_init(struct spi_options *so)
 
 	/*
 	 * setup events
+	 * NB: new packet events will be added in spi_source_add()
 	 */
 
 	/* garbage collector */
@@ -158,7 +186,9 @@ struct spi *spi_init(struct spi_options *so)
 	spi_subscribe(spi, "gcSuggestion", _gc_suggested, true);
 	spi_subscribe(spi, "classifierModelUpdated", _gc_suggested, true);
 
-	/* NB: "new packet" events will be added by spi_source_add() */
+	/* monitor for end of work */
+	spi_subscribe_after(spi, "sourceClosed", _check_if_finished, true);
+	spi_subscribe_after(spi, "traindataUpdated", _check_if_finished, true);
 
 	/* initialize classifier */
 	kissp_init(spi);
@@ -232,7 +262,7 @@ void spi_announce(struct spi *spi, const char *evname, uint32_t delay_ms, void *
 	struct spi_event *se;
 	struct timeval tv;
 	int s;
-	tlist *sl;
+	struct spi_subscribers *ss;
 
 	/* handle aggregation */
 	s = (int) thash_get(spi->aggstatus, evname);
@@ -251,15 +281,15 @@ void spi_announce(struct spi *spi, const char *evname, uint32_t delay_ms, void *
 	else
 		dbg(8, "event %s\n", evname);
 
-	/* get subscriber list */
-	sl = thash_get(spi->subscribers, evname);
-	if (!sl)
+	/* get subscribers */
+	ss = thash_get(spi->subscribers, evname);
+	if (!ss)
 		goto quit;
 
 	se = mmatic_alloc(spi->mm, sizeof *se);
 	se->spi = spi;
 	se->evname = evname;
-	se->sl = sl;
+	se->ss = ss;
 	se->arg = arg;
 	se->argfree = argfree;
 
@@ -275,27 +305,38 @@ quit:
 	return;
 }
 
-void spi_subscribe(struct spi *spi, const char *evname, spi_event_cb_t *cb, bool aggregate)
+static void _subscribe_to(struct spi *spi, const char *evname, spi_event_cb_t *cb, bool aggregate, bool to_ah)
 {
-	struct spi_subscriber *ss;
-	tlist *sl;
+	struct spi_subscribers *ss;
+	union spi_ptr2eventcb_tool pf;
 
-	/* get subscriber list */
-	sl = thash_get(spi->subscribers, evname);
-	if (!sl) {
-		sl = tlist_create(mmatic_freeptr, spi->mm);
-		thash_set(spi->subscribers, evname, sl);
+	/* get subscribers */
+	ss = thash_get(spi->subscribers, evname);
+	if (!ss) {
+		ss = mmatic_zalloc(spi->mm, sizeof *ss);
+		ss->hl = tlist_create(NULL, spi->mm);
+		ss->ahl = tlist_create(NULL, spi->mm);
+		thash_set(spi->subscribers, evname, ss);
 	}
 
-	/* append callback to subscriber list */
-	ss = mmatic_zalloc(spi->mm, sizeof *ss);
-	ss->handler = cb;
-	tlist_push(sl, ss);
+	/* append callback to appropriate subscriber list */
+	pf.func = cb;
+	tlist_push(to_ah ? ss->ahl : ss->hl, pf.ptr);
 
 	if (aggregate)
 		thash_set(spi->aggstatus, evname, (void *) SPI_AGG_READY);
 	else
 		thash_set(spi->aggstatus, evname, (void *) SPI_AGG_IGNORE);
+}
+
+void spi_subscribe(struct spi *spi, const char *evname, spi_event_cb_t *cb, bool aggregate)
+{
+	_subscribe_to(spi, evname, cb, aggregate, false);
+}
+
+void spi_subscribe_after(struct spi *spi, const char *evname, spi_event_cb_t *cb, bool aggregate)
+{
+	_subscribe_to(spi, evname, cb, aggregate, true);
 }
 
 void spi_free(struct spi *spi)
