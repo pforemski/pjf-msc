@@ -164,6 +164,9 @@ struct spi {
 	tlist *traindata;                   /** signatures for training: list of struct spi_signature */
 	tlist *trainqueue;                  /** signatures to be added to traindata */
 
+	uint32_t learned_pkt;               /** number of signatures learned from packet sources */
+	uint32_t learned_tq;                /** number of signatures learned from training queues */
+
 	void *cdata;                        /** classifiers private data */
 	void *vdata;                        /** verdict private data */
 };

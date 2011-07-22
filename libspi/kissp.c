@@ -303,6 +303,7 @@ static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 		if (sign->label) {
 			spi_train(spi, sign);
 			ep->source->learned++;
+			spi->learned_pkt++;
 		} else {
 			_predict(spi, sign, ep);
 			spi_signature_free(sign);
@@ -318,7 +319,7 @@ static bool _train(struct spi *spi, const char *evname, void *data)
 {
 	struct kissp *kissp = spi->cdata;
 
-	dbg(1, "training with %u samples in traindata\n", tlist_count(spi->traindata));
+	dbg(2, "training with %u samples in traindata\n", tlist_count(spi->traindata));
 
 	switch (kissp->options.method) {
 		case KISSP_LIBLINEAR:

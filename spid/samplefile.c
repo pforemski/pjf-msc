@@ -14,12 +14,16 @@ int sf_read(struct spid *spid, const char *path)
 
 	fp = fopen(path, "r");
 	if (!fp) {
-		dbg(1, "%s: opening for read failed: %m\n", path);
+		dbg(0, "%s: opening for read failed: %m\n", path);
 		return -1;
 	}
 
 	while (fgets(buf, sizeof buf, fp)) {
 		line++;
+
+		/* skip comments, empty lines, etc */
+		if (!buf[0] || buf[0] == '#' || buf[0] == '\n')
+			continue;
 
 		/* determine number of columns */
 		if (cols == 0) {
@@ -63,7 +67,7 @@ int sf_read(struct spid *spid, const char *path)
 			spi_trainqueue_add(spid->spi, sign);
 			j++;
 		} else {
-			dbg(1, "%s#%d: invalid number of columns (%d, expected %d)\n",
+			dbg(2, "%s#%d: invalid number of columns (%d, expected %d)\n",
 				path, line, i, cols-2);
 		}
 	}
@@ -83,7 +87,7 @@ int sf_write(struct spid *spid, const char *path)
 
 	fp = fopen(path, "w");
 	if (!fp) {
-		dbg(1, "%s: opening for write failed: %m\n", path);
+		dbg(0, "%s: opening for write failed: %m\n", path);
 		return -1;
 	}
 

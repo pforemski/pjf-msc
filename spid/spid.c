@@ -35,7 +35,9 @@ static void help(void)
 	printf("  --help,-h        show this usage help screen\n");
 	printf("  --version,-v     show version and copying information\n");
 	printf("\n");
-	printf("Add traffic sources for classification using <sspec>:\n");
+	printf("You must provide either --pktdb or --signdb option.\n");
+	printf("\n");
+	printf("Specify <traffic sources> for classification according to:\n");
 	printf("  wlan0            interface with default 'tcp or udp' filter\n");
 	printf("  \"wlan0 \"         interface without any filters\n");
 	printf("  \"wlan0 port 80\"  dump HTTP traffic\n");
@@ -228,9 +230,16 @@ static int parse_config(int argc, char *argv[])
 		}
 	}
 
+	/* check if there are any learning sources */
+	if (tlist_count(spid->learn) == 0 && !spid->options.signdb) {
+		dbg(0, "No learning sources. Provide either the --pktdb or the --signdb option.\n");
+		dbg(0, "Run spid --help for more info.\n");
+		return 2;
+	}
+
 	if (argc - optind < 1) {
-		dbg(0, "Not enough arguments\n");
-		help();
+		dbg(0, "Not enough arguments. Provide traffic sources after options.\n");
+		dbg(0, "Run spid --help for more info.\n");
 		return 2;
 	}
 
@@ -249,19 +258,14 @@ static bool start_sourcelist(tlist *sources)
 	spi_source_t type;
 
 	tlist_iter_loop(sources, src) {
-		switch (src->cmd[0]) {
-			case '/': case '.': case '~':
-				type = SPI_SOURCE_FILE;
-				break;
-			case '0': case '1': case '2': case '3': case '4':
-			case '5': case '6': case '7': case '8': case '9':
-				dbg(0, "TODO: source %s %s\n", src->proto, src->cmd);
-				continue;
-				//type = SPI_SOURCE_PTRACE;
-				break;
-			default:
-				type = SPI_SOURCE_SNIFF;
-				break;
+		if (src->cmd[0] == '.' || src->cmd[0] == '/' || src->cmd[0] == '~' || pjf_isfile(src->cmd) > 0) {
+			type = SPI_SOURCE_FILE;
+		} else if (isdigit(src->cmd[0])) {
+			dbg(0, "TODO: source %s %s\n", src->proto, src->cmd);
+			//type = SPI_SOURCE_PTRACE;
+			continue;
+		} else {
+			type = SPI_SOURCE_SNIFF;
 		}
 
 		if ((rc = spi_source_add(spid->spi, type, proto_label(src->proto), src->cmd))) {
@@ -279,8 +283,10 @@ static bool _spi_finished(struct spi *spi, const char *evname, void *arg)
 
 	switch (state) {
 		case 0:
-			/* start sources for detection */
-			start_sourcelist(spid->detect);
+			/* first "finished": start sources for detection */
+			if (!start_sourcelist(spid->detect))
+				exit(3);
+
 			state++;
 			break;
 		case 1:
@@ -325,15 +331,28 @@ int main(int argc, char *argv[])
 	/* init libspi and add learning sources */
 	spid->spi = spi_init(&spid->spi_opts);
 
-	if (!start_sourcelist(spid->learn))
-		return 2;
-
-	if (spid->options.signdb) {
-		if (sf_read(spid, spid->options.signdb) > 0)
-			spi_trainqueue_commit(spid->spi);
+	if (tlist_count(spid->learn) > 0) {
+		if (!start_sourcelist(spid->learn))
+			return 2;
 	}
 
-	/* TODO: detect if no learning sources */
+	if (spid->options.signdb) {
+		switch (sf_read(spid, spid->options.signdb)) {
+			case -1:
+				return 4;
+			case 0:
+				dbg(1, "No samples in --signdb\n");
+				break;
+			default:
+				spi_trainqueue_commit(spid->spi);
+				break;
+		}
+	}
+
+	if (spid->spi->learned_tq + spid->spi->learned_pkt == 0) {
+		dbg(0, "No protocol signatures to match against. Provide valid --pktdb or --signdb options.\n");
+		return 5;
+	}
 
 	/* treat it as the moment in which learning phase is finished, so we can add sources for detection */
 	spi_subscribe(spid->spi, "finished", _spi_finished, true);
@@ -346,8 +365,7 @@ int main(int argc, char *argv[])
 
 	while ((rc = spi_loop(spid->spi)) == 0);
 
-	if (spid->options.signdb) {
-		/* TODO: dont write if nothing new? */
+	if (spid->options.signdb && spid->spi->learned_pkt > 0) {
 		sf_write(spid, spid->options.signdb);
 	}
 

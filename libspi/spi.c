@@ -396,6 +396,7 @@ void spi_trainqueue_commit(struct spi *spi)
 
 	tlist_iter_loop(spi->trainqueue, sign) {
 		tlist_push(spi->traindata, sign); /* @1 */
+		spi->learned_tq++;
 	}
 
 	tlist_flush(spi->trainqueue);
