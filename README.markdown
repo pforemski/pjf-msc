@@ -33,3 +33,9 @@ Subscribe to events with `spi_subscribe()`, announce with `spi_announce()`.
 * `gcSuggestion(void)` - running garbage collector suggested
 * `sourceClosed(struct spi_source *src)` - source finished and closed
 * `finished(void)` - all sources finished, no learning pending and trainqueue empty
+
+spid notes
+==========
+
+* detection is started after all offline learning sources are successfully parsed, and if there are no interactive learning
+  sources

@@ -261,6 +261,7 @@ int spi_loop(struct spi *spi)
 void spi_stop(struct spi *spi)
 {
 	spi->quitting = true;
+	event_base_loopbreak(spi->eb);
 }
 
 void spi_announce(struct spi *spi, const char *evname, uint32_t delay_ms, void *arg, bool argfree)

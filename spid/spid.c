@@ -3,6 +3,7 @@
  * This software is licensed under GNU GPL version 3
  */
 
+#include <signal.h>
 #include <getopt.h>
 #include <libpjf/main.h>
 #include <libspi/spi.h>
@@ -16,7 +17,7 @@ struct spid *spid;
 /** Prints spid usage help screen */
 static void help(void)
 {
-	printf("Usage: spid [OPTIONS] <traffic sources...>\n");
+	printf("Usage: spid [OPTIONS] [<traffic sources...>]\n");
 	printf("\n");
 	printf("  Statistical Packet Inspection daemon\n");
 	printf("\n");
@@ -37,7 +38,7 @@ static void help(void)
 	printf("\n");
 	printf("You must provide either --pktdb or --signdb option.\n");
 	printf("\n");
-	printf("Specify <traffic sources> for classification according to:\n");
+	printf("Specify <traffic sources> for protocol detection according to:\n");
 	printf("  wlan0            interface with default 'tcp or udp' filter\n");
 	printf("  \"wlan0 \"         interface without any filters\n");
 	printf("  \"wlan0 port 80\"  dump HTTP traffic\n");
@@ -230,15 +231,9 @@ static int parse_config(int argc, char *argv[])
 		}
 	}
 
-	/* check if there are any learning sources */
+	/* check if there are any potential learning sources */
 	if (tlist_count(spid->learn) == 0 && !spid->options.signdb) {
-		dbg(0, "No learning sources. Provide either the --pktdb or the --signdb option.\n");
-		dbg(0, "Run spid --help for more info.\n");
-		return 2;
-	}
-
-	if (argc - optind < 1) {
-		dbg(0, "Not enough arguments. Provide traffic sources after options.\n");
+		dbg(0, "No learning sources. Provide --learn, --pktdb or --signdb options.\n");
 		dbg(0, "Run spid --help for more info.\n");
 		return 2;
 	}
@@ -277,27 +272,6 @@ static bool start_sourcelist(tlist *sources)
 	return true;
 }
 
-static bool _spi_finished(struct spi *spi, const char *evname, void *arg)
-{
-	static int state = 0;
-
-	switch (state) {
-		case 0:
-			/* first "finished": start sources for detection */
-			if (!start_sourcelist(spid->detect))
-				exit(3);
-
-			state++;
-			break;
-		case 1:
-			/* next signal means all done - quit */
-			spi_stop(spi);
-			return false;
-	}
-
-	return true;
-}
-
 /* TODO: actions */
 static bool _verdict_changed(struct spi *spi, const char *evname, void *arg)
 {
@@ -308,6 +282,43 @@ static bool _verdict_changed(struct spi *spi, const char *evname, void *arg)
 	dbg(1, "  count %4u prob %g\n", ep->verdict_count, ep->verdict_prob);
 
 	return true;
+}
+
+static bool _spi_finished(struct spi *spi, const char *evname, void *arg)
+{
+	static int state = 0;
+
+	switch (state) {
+		case 0: /* first "finished" */
+			/* if nothing to detect, we're done */
+			if (tlist_count(spid->detect) == 0) {
+				spi_stop(spi);
+				return false;
+			}
+
+			/* otherwise start sources for detection */
+			if (!start_sourcelist(spid->detect))
+				exit(3);
+
+			/* detection sources should generate events of verdict change:
+			 * subscribe to them - its a point of possible actions */
+			spi_subscribe(spid->spi, "endpointVerdictChanged", _verdict_changed, false);
+
+			state++;
+			break;
+		case 1: /* second "finished" comes after detection sources */
+			spi_stop(spi);
+			return false;
+	}
+
+	return true;
+}
+
+/** Stop on Ctrl+C */
+static void _sigint(int foo)
+{
+	dbg(3, "SIGINT received, stopping libspi...\n");
+	spi_stop(spid->spi);
 }
 
 int main(int argc, char *argv[])
@@ -339,7 +350,7 @@ int main(int argc, char *argv[])
 	if (spid->options.signdb) {
 		switch (sf_read(spid, spid->options.signdb)) {
 			case -1:
-				return 4;
+				break;
 			case 0:
 				dbg(1, "No samples in --signdb\n");
 				break;
@@ -349,19 +360,19 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (spid->spi->learned_tq + spid->spi->learned_pkt == 0) {
-		dbg(0, "No protocol signatures to match against. Provide valid --pktdb or --signdb options.\n");
-		return 5;
+	if (tlist_count(spid->learn) == 0 && spid->spi->learned_tq == 0) {
+		dbg(0, "No protocol signatures\n");
+		return 4;
 	}
 
-	/* treat it as the moment in which learning phase is finished, so we can add sources for detection */
+	/* subscribe to event that might be treated as the moment in which the learning phase
+	 * is finished, so we can add sources for detection */
 	spi_subscribe(spid->spi, "finished", _spi_finished, true);
-
-	/* subscribe to the event of verdict change - point of possible actions */
-	spi_subscribe(spid->spi, "endpointVerdictChanged", _verdict_changed, false);
 
 	if (spid->options.daemonize)
 		pjf_daemonize("spid", spid->options.pidfile);
+
+	signal(SIGINT, _sigint);
 
 	while ((rc = spi_loop(spid->spi)) == 0);
 

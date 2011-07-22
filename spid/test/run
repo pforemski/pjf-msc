@@ -5,8 +5,15 @@ cmd="./spid --signdb=./test/signdb ./test/$set.pcap"
 echo "$cmd"
 
 time $cmd 2> ./test/last.txt
-if diff -u test/$set.txt test/last.txt; then
-	echo OK
+cat ./test/last.txt
+
+if [[ -f test/$set.txt ]]; then
+	if diff -u test/$set.txt test/last.txt; then
+		echo OK
+	else
+		echo FAIL
+	fi
 else
-	echo FAIL
+	mv test/last.txt test/$set.txt
+	echo FIRST
 fi

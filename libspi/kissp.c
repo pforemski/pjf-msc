@@ -221,6 +221,9 @@ static struct spi_signature *_signature_compute_eat(struct spi *spi, struct spi_
 			xp = x;
 		}
 
+		dbg(7, "ep %s flow stats: avgsize=%.0fB avgdelay=%.0fms avgjitter=%0.fms\n",
+			spi_epa2a(ep->epa), avgsize, avgdelay, avgjitter);
+
 		/* normalize avg stats */
 		if (avgsize > 1500)
 			avgsize = 1.0;
@@ -304,6 +307,8 @@ static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 			spi_train(spi, sign);
 			ep->source->learned++;
 			spi->learned_pkt++;
+
+			dbg(5, "learned proto %d from ep %s\n", sign->label, spi_epa2a(ep->epa));
 		} else {
 			_predict(spi, sign, ep);
 			spi_signature_free(sign);

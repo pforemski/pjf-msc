@@ -47,6 +47,8 @@ struct spi_ep *ep_new_pkt(struct spi_source *source, spi_proto_t proto, spi_epad
 		thash_set(spi->eps, key, ep);
 
 		source->eps++;
+
+		dbg(8, "new ep %s\n", spi_epa2a(epa));
 	}
 
 	/* make packet */
@@ -69,6 +71,7 @@ struct spi_ep *ep_new_pkt(struct spi_source *source, spi_proto_t proto, spi_epad
 	if (!ep->pending && tlist_count(ep->pkts) >= spi->options.C) {
 		ep->pending = true;
 		spi_announce(spi, "endpointPacketsReady", 0, ep, false);
+		dbg(7, "ep %s ready\n", spi_epa2a(epa));
 	}
 
 	return ep;
