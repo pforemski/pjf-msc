@@ -29,6 +29,9 @@ static void help(void)
 	printf("                   protocol file [filter]\n");
 	printf("                   protocol interface [filter]\n");
 	printf("  --signdb=<path>  signature database file\n");
+	printf("  --kiss-std       use standard KISS algorithm\n");
+	printf("  --kiss-linear    use liblinear instead of libsvm\n");
+	printf("\n");
 	printf("  --daemonize,-d   daemonize and syslog\n");
 	printf("  --pidfile=<path> where to write daemon PID to [%s]\n", SPID_PIDFILE);
 	printf("  --verbose        be verbose (ie. --debug=5)\n");
@@ -181,15 +184,17 @@ static int parse_config(int argc, char *argv[])
 	static char *short_opts = "hvd";
 	static struct option long_opts[] = {
 		/* name, has_arg, NULL, short_ch */
-		{ "verbose",    0, NULL,  1  },
-		{ "debug",      1, NULL,  2  },
-		{ "help",       0, NULL,  3  },
-		{ "version",    0, NULL,  4  },
-		{ "daemonize",  0, NULL,  5  },
-		{ "pidfile",    1, NULL,  6  },
-		{ "learn",      1, NULL,  7  },
-		{ "pktdb",      1, NULL,  8  },
-		{ "signdb",     1, NULL,  9  },
+		{ "verbose",     0, NULL,  1 },
+		{ "debug",       1, NULL,  2 },
+		{ "help",        0, NULL,  3 },
+		{ "version",     0, NULL,  4 },
+		{ "daemonize",   0, NULL,  5 },
+		{ "pidfile",     1, NULL,  6 },
+		{ "learn",       1, NULL,  7 },
+		{ "pktdb",       1, NULL,  8 },
+		{ "signdb",      1, NULL,  9 },
+		{ "kiss-std",    0, NULL, 10 },
+		{ "kiss-linear", 0, NULL, 11 },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -227,6 +232,8 @@ static int parse_config(int argc, char *argv[])
 				else
 					break;
 			case  9 : spid->options.signdb = mmatic_strdup(spid->mm, optarg); break;
+			case 10 : spid->spi_opts.kiss_std = true; break;
+			case 11 : spid->spi_opts.kiss_linear = true; break;
 			default: help(); return 2;
 		}
 	}

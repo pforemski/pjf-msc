@@ -139,6 +139,12 @@ struct spi_options {
 	uint8_t N;                          /** payload bytes */
 	uint8_t P;                          /** packets per TCP flow */
 	uint8_t C;                          /** packets per endpoint window */
+
+	/* KISS */
+	bool kiss_std;                      /** use KISS extensions */
+	bool kiss_linear;                   /** use liblinear instead of libsvm */
+	struct parameter *liblinear_params; /** liblinear params */
+	struct svm_parameter *libsvm_params;/** libsvm params */
 };
 
 /** Main data root */

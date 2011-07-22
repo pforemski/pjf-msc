@@ -79,7 +79,7 @@ static inline const char *spi_epa2a(spi_epaddr_t epa)
 	return buf;
 }
 
-/** Print protocol name */
+/** Print transport protocol name */
 #define spi_proto2a(p) (p == SPI_PROTO_UDP ? "UDP" : "TCP")
 
 /** Add given signature to training samples and schedule re-learning
@@ -87,11 +87,6 @@ static inline const char *spi_epa2a(spi_epaddr_t epa)
  * @param label               protocol label
  */
 void spi_train(struct spi *spi, struct spi_signature *sign);
-
-/** Get traindata database
- * @return a tlist of struct spi_signature
- */
-tlist *spi_train_get(struct spi *spi);
 
 /** Add given signature to training samples queue, but don't run re-learning
  * @param sign                signature

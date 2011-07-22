@@ -8,7 +8,7 @@
 #define _KISSP_H_
 
 #include <linear.h> /* liblinear */
-#include <libsvm/svm.h>
+#include <svm.h>
 
 #include "datastructures.h"
 
@@ -17,6 +17,8 @@
 
 /** Internal KISSP data */
 struct kissp {
+	int feature_num;         /** number of signature coordinates */
+
 	/** KISSP options */
 	struct {
 		bool pktstats;       /** use packet stats in signatures */
@@ -32,6 +34,11 @@ struct kissp {
 			struct model *model;      /** liblinear model */
 			struct parameter params;  /** liblinear parameters */
 		} linear;
+
+		struct {
+			struct svm_model *model;      /** libsvm model */
+			struct svm_parameter params; /** libsvm parameters */
+		} svm;
 	} as;
 };
 

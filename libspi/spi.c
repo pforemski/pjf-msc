@@ -56,6 +56,14 @@ static void _subscriber_free(void *arg)
 	mmatic_freeptr(ss);
 }
 
+void spi_signature_free(void *arg)
+{
+	struct spi_signature *sign = arg;
+
+	mmatic_freeptr(sign->c);
+	mmatic_freeptr(sign);
+}
+
 /** Setup default options */
 static void _options_defaults(struct spi *spi)
 {
@@ -402,19 +410,6 @@ void spi_trainqueue_commit(struct spi *spi)
 
 	tlist_flush(spi->trainqueue);
 	spi_announce(spi, "traindataUpdated", 0, NULL, false);
-}
-
-tlist *spi_train_get(struct spi *spi)
-{
-	return spi->traindata;
-}
-
-void spi_signature_free(void *arg)
-{
-	struct spi_signature *sign = arg;
-
-	mmatic_freeptr(sign->c);
-	mmatic_freeptr(sign);
 }
 
 /*

@@ -13,7 +13,7 @@
 void _simple_verdict(struct spi *spi, struct spi_classresult *cr)
 {
 	cr->ep->verdict = cr->result;
-	cr->ep->verdict_prob = 1.0;
+	cr->ep->verdict_prob = cr->cprob[cr->result];
 	cr->ep->verdict_count++;
 }
 

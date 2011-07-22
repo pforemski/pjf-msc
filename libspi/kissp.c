@@ -21,11 +21,15 @@ static void _linear_init(struct spi *spi)
 {
 	struct kissp *kissp = spi->cdata;
 
-	/* set parameters (TODO?) */
-	kissp->as.linear.params.solver_type = L2R_L2LOSS_SVC_DUAL;
-	kissp->as.linear.params.eps = 0.1;
-	kissp->as.linear.params.C = 1;
-	kissp->as.linear.params.nr_weight = 0;     /* NB: .weight_label and .weight not set */
+	if (spi->options.liblinear_params) {
+		memcpy(&kissp->as.linear.params, spi->options.liblinear_params, sizeof kissp->as.linear.params);
+	} else {
+		/* defaults */
+		kissp->as.linear.params.solver_type = L2R_L2LOSS_SVC_DUAL;
+		kissp->as.linear.params.eps = 0.1;
+		kissp->as.linear.params.C = 1;
+		kissp->as.linear.params.nr_weight = 0;     /* NB: .weight_label and .weight not set */
+	}
 
 	set_print_string_function(_linear_print_func);
 }
@@ -40,11 +44,7 @@ static void _linear_train(struct spi *spi)
 
 	/* describe the problem */
 	p.l = tlist_count(spi->traindata);
-
-	p.n = spi->options.N * 2;
-	if (kissp->options.pktstats)
-		p.n += SPI_KISSP_FEATURES;
-
+	p.n = kissp->feature_num;
 	p.x = mmatic_alloc(spi->mm, (sizeof (void *)) * p.l);
 	p.y = mmatic_alloc(spi->mm, (sizeof (int)) * p.l);
 
@@ -110,9 +110,111 @@ static void _linear_predict(struct spi *spi, struct spi_signature *sign, struct 
 }
 
 /********** libsvm */
+static void _svm_print_func(const char *msg)
+{
+	while (*msg == '\n') msg++;
+	dbg(9, "libsvm: %s", msg);
+}
+
+static void _svm_init(struct spi *spi)
+{
+	struct kissp *kissp = spi->cdata;
+
+	if (spi->options.libsvm_params) {
+		memcpy(&kissp->as.svm.params, spi->options.libsvm_params, sizeof kissp->as.svm.params);
+	} else {
+		/* defaults */
+		kissp->as.svm.params.svm_type = C_SVC;
+		kissp->as.svm.params.kernel_type = RBF;
+		kissp->as.svm.params.degree = 3;
+
+		kissp->as.svm.params.gamma = 1.0 / (double) kissp->feature_num;
+		kissp->as.svm.params.coef0 = 0.0;
+
+		kissp->as.svm.params.cache_size = 100.0;
+		kissp->as.svm.params.eps = 0.1;
+		kissp->as.svm.params.C = 1;
+		kissp->as.svm.params.nr_weight = 0;     /* NB: .weight_label and .weight not set */
+
+		kissp->as.svm.params.nu = 0.5;
+		kissp->as.svm.params.p = 0.1;
+
+		kissp->as.svm.params.shrinking = 1;
+		kissp->as.svm.params.probability = 1; /* NB */
+	}
+
+	svm_set_print_string_function(_svm_print_func);
+}
+
 static void _svm_train(struct spi *spi)
 {
-	dbg(0, "TODO :)\n");
+	struct kissp *kissp = spi->cdata;
+	struct svm_problem p;
+	struct spi_signature *s;
+	int i;
+	const char *err;
+
+	/* describe the problem */
+	p.l = tlist_count(spi->traindata);
+	p.x = mmatic_alloc(spi->mm, (sizeof (void *)) * p.l);
+	p.y = mmatic_alloc(spi->mm, (sizeof (double)) * p.l);
+
+	i = 0;
+	tlist_iter_loop(spi->traindata, s) {
+		p.x[i] = (struct svm_node *) s->c;   /* NB: identical */
+		p.y[i] = s->label;
+		i++;
+	}
+
+	/* check */
+	err = svm_check_parameter(&p, &kissp->as.svm.params);
+	if (err) {
+		dbg(1, "libsvm training failed: check_parameter(): %s\n", err);
+		return;
+	}
+
+	/* destroy previous model */
+	if (kissp->as.svm.model)
+		svm_destroy_model(kissp->as.svm.model);
+//		svm_free_and_destroy_model(&kissp->as.svm.model);
+
+	/* run */
+	kissp->as.svm.model = svm_train(&p, &kissp->as.svm.params);
+
+	dbg(5, "updated libsvm model, nr_class=%d\n",
+		svm_get_nr_class(kissp->as.svm.model));
+
+	spi_announce(spi, "classifierModelUpdated", 0, NULL, false);
+
+	mmatic_freeptr(p.x);
+	mmatic_freeptr(p.y);
+}
+
+static void _svm_predict(struct spi *spi, struct spi_signature *sign, struct spi_ep *ep)
+{
+	struct kissp *kissp = spi->cdata;
+	struct spi_classresult *cr;
+
+	if (!kissp->as.svm.model) {
+		dbg(1, "cant classify: no model\n");
+		return;
+	}
+
+	cr = mmatic_zalloc(spi->mm, sizeof *cr);
+	cr->ep = ep;
+
+	switch (kissp->as.svm.params.svm_type) {
+		case C_SVC:
+		case NU_SVC:
+			cr->result = svm_predict_probability(kissp->as.svm.model, (struct svm_node *) sign->c, cr->cprob);
+			break;
+		default:
+			cr->result = svm_predict(kissp->as.svm.model, (struct svm_node *) sign->c);
+			cr->cprob[cr->result] = 1.0;
+			break;
+	}
+
+	spi_announce(spi, "endpointClassification", 0, cr, true);
 }
 
 /********** signature generation */
@@ -150,9 +252,8 @@ static struct spi_signature *_signature_compute_eat(struct spi *spi, struct spi_
 
 	timerclear(&Tp);
 
-	/* 2N groups + additional + 1 ending */
-	sign->c = mmatic_zalloc(spi->mm,
-		sizeof(*sign->c) * (spi->options.N*2 + SPI_KISSP_FEATURES + 1));
+	/* +1 for ending index=-1 */
+	sign->c = mmatic_zalloc(spi->mm, sizeof(*sign->c) * (kissp->feature_num + 1));
 
 	/* 1) count byte occurances in each of 2N groups
 	 * 2) compute approximate mean packet size
@@ -285,7 +386,7 @@ static void _predict(struct spi *spi, struct spi_signature *sign, struct spi_ep 
 			_linear_predict(spi, sign, ep);
 			break;
 		case KISSP_LIBSVM:
-			dbg(0, "TODO :)\n");
+			_svm_predict(spi, sign, ep);
 			break;
 	}
 }
@@ -350,13 +451,25 @@ void kissp_init(struct spi *spi)
 	/* subscribe to new learning samples */
 	spi_subscribe(spi, "traindataUpdated", _train, true);
 
+	/* KISS+ internal data */
 	kissp = mmatic_zalloc(spi->mm, sizeof *kissp);
 	spi->cdata = kissp;
 
-	/* TODO: let for choosing options */
-	kissp->options.pktstats = true;
-	kissp->options.method = KISSP_LIBLINEAR;
-	_linear_init(spi);
+	if (spi->options.kiss_std) {
+		kissp->options.pktstats = false;
+		kissp->feature_num = spi->options.N*2;
+	} else {
+		kissp->options.pktstats = true;
+		kissp->feature_num = spi->options.N*2 + SPI_KISSP_FEATURES;
+	}
+
+	if (spi->options.kiss_linear) {
+		kissp->options.method = KISSP_LIBLINEAR;
+		_linear_init(spi);
+	} else {
+		kissp->options.method = KISSP_LIBSVM;
+		_svm_init(spi);
+	}
 }
 
 void kissp_free(struct spi *spi)

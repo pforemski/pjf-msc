@@ -8,9 +8,7 @@ TODO
 ====
 
 * libspi
-  * implement SVM
-  * implement EWMA verdict issuer
-  * let for choosing classifier/verdict issuer and their options
+  * implement EWMA verdict issuer, let for choosing verdict issuer and options
   * compute average size, IPT and jitter for both directions separately?
 * spid
   * sooner or later a real config file will be necessary :)
@@ -37,5 +35,5 @@ Subscribe to events with `spi_subscribe()`, announce with `spi_announce()`.
 spid notes
 ==========
 
-* detection is started after all offline learning sources are successfully parsed, and if there are no interactive learning
+* detection is started after all offline learning sources are successfully completed, and if there are no interactive learning
   sources

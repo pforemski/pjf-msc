@@ -81,7 +81,6 @@ int sf_read(struct spid *spid, const char *path)
 int sf_write(struct spid *spid, const char *path)
 {
 	FILE *fp;
-	tlist *td;
 	struct spi_signature *sign;
 	int i, j = 0;
 
@@ -91,8 +90,7 @@ int sf_write(struct spid *spid, const char *path)
 		return -1;
 	}
 
-	td = spi_train_get(spid->spi);
-	tlist_iter_loop(td, sign) {
+	tlist_iter_loop(spid->spi->traindata, sign) {
 		fprintf(fp, "%s", label_proto(sign->label));
 		for (i = 0; sign->c[i].index != -1; i++)
 			fprintf(fp, " %g", sign->c[i].value);
