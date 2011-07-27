@@ -145,6 +145,10 @@ struct spi_options {
 	bool kiss_linear;                   /** use liblinear instead of libsvm */
 	struct parameter *liblinear_params; /** liblinear params */
 	struct svm_parameter *libsvm_params;/** libsvm params */
+
+	/* verdict */
+	bool verdict_simple;                /** use simple verdict instead of EWMA */
+	int  verdict_ewma_len;              /** length */
 };
 
 /** Main data root */

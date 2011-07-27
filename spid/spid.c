@@ -31,6 +31,9 @@ static void help(void)
 	printf("  --signdb=<path>  signature database file\n");
 	printf("  --kiss-std       use standard KISS algorithm\n");
 	printf("  --kiss-linear    use liblinear instead of libsvm\n");
+	printf("  --verdict-ewma-len=<num>\n");
+	printf("                   set length of EWMA verdict issuer\n");
+	printf("  --verdict-simple use simple verdict issuer\n");
 	printf("\n");
 	printf("  --daemonize,-d   daemonize and syslog\n");
 	printf("  --pidfile=<path> where to write daemon PID to [%s]\n", SPID_PIDFILE);
@@ -195,6 +198,8 @@ static int parse_config(int argc, char *argv[])
 		{ "signdb",      1, NULL,  9 },
 		{ "kiss-std",    0, NULL, 10 },
 		{ "kiss-linear", 0, NULL, 11 },
+		{ "verdict-ewma-len", 1, NULL, 12 },
+		{ "verdict-simple", 0, NULL, 13 },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -234,6 +239,8 @@ static int parse_config(int argc, char *argv[])
 			case  9 : spid->options.signdb = mmatic_strdup(spid->mm, optarg); break;
 			case 10 : spid->spi_opts.kiss_std = true; break;
 			case 11 : spid->spi_opts.kiss_linear = true; break;
+			case 12 : spid->spi_opts.verdict_ewma_len = atoi(optarg); break;
+			case 13 : spid->spi_opts.verdict_simple = true; break;
 			default: help(); return 2;
 		}
 	}
@@ -286,7 +293,7 @@ static bool _verdict_changed(struct spi *spi, const char *evname, void *arg)
 
 	dbg(0, "%s %21s is %s\n",
 		spi_proto2a(ep->proto), spi_epa2a(ep->epa), label_proto(ep->verdict));
-	dbg(1, "  count %4u prob %g\n", ep->verdict_count, ep->verdict_prob);
+	dbg(1, "  count %4u prob %.0f%%\n", ep->verdict_count, ep->verdict_prob * 100.0);
 
 	return true;
 }

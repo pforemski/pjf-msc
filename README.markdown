@@ -8,7 +8,7 @@ TODO
 ====
 
 * libspi
-  * implement EWMA verdict issuer, let for choosing verdict issuer and options
+  * fix EWMA+SVM - libsvm returns invalid probabilities
   * compute average size, IPT and jitter for both directions separately?
 * spid
   * sooner or later a real config file will be necessary :)

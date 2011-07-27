@@ -9,14 +9,11 @@
 
 #include "datastructures.h"
 
-/** Per-endpoint verdict data */
-struct spi_ep_verdict {
-	/** type-dependent info */
-	union {
-		struct verdict_ep_emwa_t {
-			spi_cprob_t cprob; /** histogram of verdicts over time: EWMA of class. probabilty for each label */
-		} ewma;
-	} as;
+/** Per-endpoint EWMA verdict data */
+struct ewma_verdict {
+	/** histogram of verdicts over time:
+	 * EWMA of classification probabilty for each label */
+	spi_cprob_t cprob;
 };
 
 /** Global verdict data */
