@@ -32,19 +32,14 @@ static void _ewma_verdict(struct spi *spi, struct spi_classresult *cr)
 		cr->ep->vdata = ev;
 	}
 
-	for (i = 1; i < N(ev->cprob); i++) {
-		//if (cr->cprob[i] >0)
-			//dbg(1, "%s ep %s label %d is %.4f: merging %.4f\n", spi_proto2a(cr->ep->proto), spi_epa2a(cr->ep->epa), i, ev->cprob[i], cr->cprob[i]);
-
+	for (i = 0; i < N(ev->cprob); i++) {
 		ev->cprob[i] = EWMA(ev->cprob[i], cr->cprob[i], v->as.ewma.N);
 
 		if (ev->cprob[i] > max) {
 			max = ev->cprob[i];
-			max_label = i;
+			max_label = i + 1;
 		}
 	}
-
-	//dbg(1, "!!! best %d(%g) chosen %d(%g)\n", cr->result, cr->cprob[cr->result], max_label, max);
 
 	cr->ep->verdict = max_label;
 	cr->ep->verdict_prob = max;

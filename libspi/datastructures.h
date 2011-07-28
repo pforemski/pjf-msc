@@ -20,8 +20,11 @@ typedef uint8_t spi_label_t;
 /** Max value of spi_label_t */
 #define SPI_LABEL_MAX 255
 
-/** Table with classification probabilities */
-typedef double spi_cprob_t[SPI_LABEL_MAX + 1];
+/** Table with classification probabilities
+ * Probability of label 1 is index 0,
+ * Probability of label 2 is index 1, etc.
+ */
+typedef double spi_cprob_t[SPI_LABEL_MAX];
 
 /** Endpoint address (ip << 32 | port) */
 typedef uint64_t spi_epaddr_t;

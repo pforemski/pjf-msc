@@ -102,7 +102,8 @@ static void _linear_predict(struct spi *spi, struct spi_signature *sign, struct 
 			break;
 		default:
 			cr->result = predict(kissp->as.linear.model, (struct feature_node *) sign->c);
-			cr->cprob[cr->result] = 1.0;
+			if (cr->result >= 1)
+				cr->cprob[cr->result - 1] = 1.0;
 			break;
 	}
 
@@ -210,7 +211,8 @@ static void _svm_predict(struct spi *spi, struct spi_signature *sign, struct spi
 			break;
 		default:
 			cr->result = svm_predict(kissp->as.svm.model, (struct svm_node *) sign->c);
-			cr->cprob[cr->result] = 1.0;
+			if (cr->result >= 1)
+				cr->cprob[cr->result - 1] = 1.0;
 			break;
 	}
 
