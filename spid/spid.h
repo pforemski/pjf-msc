@@ -33,6 +33,7 @@ struct spid {
 		bool daemonize;            /** run in foreground? */
 		const char *pidfile;       /** PID file */
 		const char *signdb;        /** signature database file */
+		bool print_prob;           /** print probabilities */
 	} options;
 };
 

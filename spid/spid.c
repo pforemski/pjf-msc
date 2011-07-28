@@ -29,12 +29,16 @@ static void help(void)
 	printf("                   protocol file [filter]\n");
 	printf("                   protocol interface [filter]\n");
 	printf("  --signdb=<path>  signature database file\n");
+	printf("\n");
 	printf("  --kiss-std       use standard KISS algorithm\n");
 	printf("  --kiss-linear    use liblinear instead of libsvm\n");
 	printf("  --verdict-ewma-len=<num>\n");
 	printf("                   set length of EWMA verdict issuer\n");
 	printf("  --verdict-simple use simple verdict issuer\n");
+	printf("  --verdict-threshold=<t>\n");
+	printf("                   treat verdicts with probability below <t>%% as unknowns\n");
 	printf("\n");
+	printf("  --print-probs    print probabilities\n");
 	printf("  --daemonize,-d   daemonize and syslog\n");
 	printf("  --pidfile=<path> where to write daemon PID to [%s]\n", SPID_PIDFILE);
 	printf("  --verbose        be verbose (ie. --debug=5)\n");
@@ -198,8 +202,10 @@ static int parse_config(int argc, char *argv[])
 		{ "signdb",      1, NULL,  9 },
 		{ "kiss-std",    0, NULL, 10 },
 		{ "kiss-linear", 0, NULL, 11 },
-		{ "verdict-ewma-len", 1, NULL, 12 },
-		{ "verdict-simple", 0, NULL, 13 },
+		{ "verdict-ewma-len",  1, NULL, 12 },
+		{ "verdict-simple",    0, NULL, 13 },
+		{ "verdict-threshold", 1, NULL, 14 },
+		{ "print-probs",       0, NULL, 15 },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -241,6 +247,8 @@ static int parse_config(int argc, char *argv[])
 			case 11 : spid->spi_opts.kiss_linear = true; break;
 			case 12 : spid->spi_opts.verdict_ewma_len = atoi(optarg); break;
 			case 13 : spid->spi_opts.verdict_simple = true; break;
+			case 14 : spid->spi_opts.verdict_threshold = ((double) atoi(optarg)) / 100.0; break;
+			case 15 : spid->options.print_prob = true; break;
 			default: help(); return 2;
 		}
 	}
@@ -269,10 +277,6 @@ static bool start_sourcelist(tlist *sources)
 	tlist_iter_loop(sources, src) {
 		if (src->cmd[0] == '.' || src->cmd[0] == '/' || src->cmd[0] == '~' || pjf_isfile(src->cmd) > 0) {
 			type = SPI_SOURCE_FILE;
-		} else if (isdigit(src->cmd[0])) {
-			dbg(0, "TODO: source %s %s\n", src->proto, src->cmd);
-			//type = SPI_SOURCE_PTRACE;
-			continue;
 		} else {
 			type = SPI_SOURCE_SNIFF;
 		}
@@ -286,14 +290,18 @@ static bool start_sourcelist(tlist *sources)
 	return true;
 }
 
-/* TODO: actions */
 static bool _verdict_changed(struct spi *spi, const char *evname, void *arg)
 {
 	struct spi_ep *ep = arg;
 
-	dbg(0, "%s %21s is %s\n",
-		spi_proto2a(ep->proto), spi_epa2a(ep->epa), label_proto(ep->verdict));
-	dbg(1, "  count %4u prob %.0f%%\n", ep->verdict_count, ep->verdict_prob * 100.0);
+	if (spid->options.print_prob) {
+		dbg(-1, "%s %s is %s %.0f %u\n",
+			spi_proto2a(ep->proto), spi_epa2a(ep->epa), label_proto(ep->verdict),
+			ep->verdict_prob * 100.0, ep->verdict_count);
+	} else {
+		dbg(-1, "%s %s is %s\n",
+			spi_proto2a(ep->proto), spi_epa2a(ep->epa), label_proto(ep->verdict));
+	}
 
 	return true;
 }

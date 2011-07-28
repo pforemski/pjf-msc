@@ -150,8 +150,9 @@ struct spi_options {
 	struct svm_parameter *libsvm_params;/** libsvm params */
 
 	/* verdict */
+	double verdict_threshold;           /** verdict threshold */
 	bool verdict_simple;                /** use simple verdict instead of EWMA */
-	int  verdict_ewma_len;              /** length */
+	int  verdict_ewma_len;              /** ewma length */
 };
 
 /** Main data root */

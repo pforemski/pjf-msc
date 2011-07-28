@@ -13,7 +13,7 @@
 static void _simple_verdict(struct spi *spi, struct spi_classresult *cr)
 {
 	cr->ep->verdict = cr->result;
-	cr->ep->verdict_prob = cr->cprob[cr->result];
+	cr->ep->verdict_prob = cr->cprob[cr->result - 1];
 	cr->ep->verdict_count++;
 }
 
@@ -65,6 +65,10 @@ static bool _verdict_new_classification(struct spi *spi, const char *evname, voi
 			_ewma_verdict(spi, cr);
 			break;
 	}
+
+	/* treat as "unknown" if below threshold */
+	if (spi->options.verdict_threshold > 0.0 && cr->ep->verdict_prob < spi->options.verdict_threshold)
+		cr->ep->verdict = 0;
 
 	dbg(9, "ep %s is %u\n", spi_epa2a(cr->ep->epa), cr->ep->verdict);
 

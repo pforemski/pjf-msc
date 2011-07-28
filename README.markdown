@@ -4,15 +4,6 @@ About
 This holds a Statistical Packet Inspection system. Its divided into two parts: libspi - a backend handling the maths -
 and spid - frontend deciding what to feed libspi with and what to do with the results.
 
-TODO
-====
-
-* libspi
-  * compute average size, IPT and jitter for both directions separately?
-* spid
-  * sooner or later a real config file will be necessary :)
-  * actions!
-
 libspi events
 =============
 
@@ -36,3 +27,12 @@ spid notes
 
 * detection is started after all offline learning sources are successfully completed, and if there are no interactive learning
   sources
+
+For future work
+===============
+
+* libspi
+  * compute average size, IPT and jitter for both directions separately?
+* spid
+  * sooner or later a real config file will be necessary :)
+  * better actions
