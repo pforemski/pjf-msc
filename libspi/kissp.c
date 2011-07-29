@@ -31,6 +31,8 @@ static void _linear_init(struct spi *spi)
 		kissp->as.linear.params.nr_weight = 0;     /* NB: .weight_label and .weight not set */
 	}
 
+	kissp->as.linear.labels = mmatic_zalloc(spi->mm, sizeof(int) * SPI_LABEL_MAX);
+
 	set_print_string_function(_linear_print_func);
 }
 
@@ -70,9 +72,11 @@ static void _linear_train(struct spi *spi)
 
 	/* run */
 	kissp->as.linear.model = train(&p, &kissp->as.linear.params);
+	kissp->as.linear.nr_class = get_nr_class(kissp->as.linear.model);
+	get_labels(kissp->as.linear.model, kissp->as.linear.labels);
 
 	dbg(5, "updated liblinear model, nr_class=%d, nr_feature=%d\n",
-		kissp->as.linear.model->nr_class,
+		kissp->as.linear.nr_class,
 		kissp->as.linear.model->nr_feature);
 
 	spi_announce(spi, "classifierModelUpdated", 0, NULL, false);
@@ -85,6 +89,8 @@ static void _linear_predict(struct spi *spi, struct spi_signature *sign, struct 
 {
 	struct kissp *kissp = spi->cdata;
 	struct spi_classresult *cr;
+	spi_cprob_t cprob_linear;
+	int i;
 
 	if (!kissp->as.linear.model) {
 		dbg(1, "cant classify: no model\n");
@@ -93,17 +99,22 @@ static void _linear_predict(struct spi *spi, struct spi_signature *sign, struct 
 
 	cr = mmatic_zalloc(spi->mm, sizeof *cr);
 	cr->ep = ep;
+	memset(cprob_linear, 0, sizeof cprob_linear);
 
 	switch (kissp->as.linear.params.solver_type) {
 		case L2R_LR:
 		case L1R_LR:
 			/* logistic regression supports prediction probability */
-			cr->result = predict_probability(kissp->as.linear.model, (struct feature_node *) sign->c, cr->cprob);
+			cr->result = predict_probability(kissp->as.linear.model, (struct feature_node *) sign->c, cprob_linear);
+
+			/* rewrite from liblinear's to ours */
+			for (i = 0; i < kissp->as.linear.nr_class; i++)
+				cr->cprob[kissp->as.linear.labels[i]] = cprob_linear[i];
+
 			break;
 		default:
 			cr->result = predict(kissp->as.linear.model, (struct feature_node *) sign->c);
-			if (cr->result >= 1)
-				cr->cprob[cr->result - 1] = 1.0;
+			cr->cprob[cr->result] = 1.0;
 			break;
 	}
 
@@ -144,6 +155,8 @@ static void _svm_init(struct spi *spi)
 		kissp->as.svm.params.probability = 1; /* NB */
 	}
 
+	kissp->as.svm.labels = mmatic_zalloc(spi->mm, sizeof(int) * SPI_LABEL_MAX);
+
 	svm_set_print_string_function(_svm_print_func);
 }
 
@@ -180,9 +193,10 @@ static void _svm_train(struct spi *spi)
 
 	/* run */
 	kissp->as.svm.model = svm_train(&p, &kissp->as.svm.params);
+	kissp->as.svm.nr_class = svm_get_nr_class(kissp->as.svm.model);
+	svm_get_labels(kissp->as.svm.model, kissp->as.svm.labels);
 
-	dbg(5, "updated libsvm model, nr_class=%d\n",
-		svm_get_nr_class(kissp->as.svm.model));
+	dbg(5, "updated libsvm model, nr_class=%d\n", kissp->as.svm.nr_class);
 
 	spi_announce(spi, "classifierModelUpdated", 0, NULL, false);
 
@@ -194,6 +208,8 @@ static void _svm_predict(struct spi *spi, struct spi_signature *sign, struct spi
 {
 	struct kissp *kissp = spi->cdata;
 	struct spi_classresult *cr;
+	spi_cprob_t cprob_svm;
+	int i;
 
 	if (!kissp->as.svm.model) {
 		dbg(1, "cant classify: no model\n");
@@ -202,16 +218,21 @@ static void _svm_predict(struct spi *spi, struct spi_signature *sign, struct spi
 
 	cr = mmatic_zalloc(spi->mm, sizeof *cr);
 	cr->ep = ep;
+	memset(cprob_svm, 0, sizeof cprob_svm);
 
 	switch (kissp->as.svm.params.svm_type) {
 		case C_SVC:
 		case NU_SVC:
-			cr->result = svm_predict_probability(kissp->as.svm.model, (struct svm_node *) sign->c, cr->cprob);
+			cr->result = svm_predict_probability(kissp->as.svm.model, (struct svm_node *) sign->c, cprob_svm);
+
+			/* rewrite from libsvm's to ours */
+			for (i = 0; i < kissp->as.svm.nr_class; i++)
+				cr->cprob[kissp->as.svm.labels[i]] = cprob_svm[i];
+
 			break;
 		default:
 			cr->result = svm_predict(kissp->as.svm.model, (struct svm_node *) sign->c);
-			if (cr->result >= 1)
-				cr->cprob[cr->result - 1] = 1.0;
+			cr->cprob[cr->result] = 1.0;
 			break;
 	}
 

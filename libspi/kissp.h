@@ -33,11 +33,15 @@ struct kissp {
 		struct {
 			struct model *model;      /** liblinear model */
 			struct parameter params;  /** liblinear parameters */
+			int *labels;                  /** translation of svm->libspi labels */
+			int nr_class;                 /** number of classes */
 		} linear;
 
 		struct {
 			struct svm_model *model;      /** libsvm model */
-			struct svm_parameter params; /** libsvm parameters */
+			struct svm_parameter params;  /** libsvm parameters */
+			int *labels;                  /** translation of svm->libspi labels */
+			int nr_class;                 /** number of classes */
 		} svm;
 	} as;
 };

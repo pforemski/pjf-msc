@@ -13,7 +13,7 @@
 static void _simple_verdict(struct spi *spi, struct spi_classresult *cr)
 {
 	cr->ep->verdict = cr->result;
-	cr->ep->verdict_prob = cr->cprob[cr->result - 1];
+	cr->ep->verdict_prob = cr->cprob[cr->result];
 	cr->ep->verdict_count++;
 }
 
@@ -32,12 +32,12 @@ static void _ewma_verdict(struct spi *spi, struct spi_classresult *cr)
 		cr->ep->vdata = ev;
 	}
 
-	for (i = 0; i < N(ev->cprob); i++) {
+	for (i = 1; i < N(ev->cprob); i++) {
 		ev->cprob[i] = EWMA(ev->cprob[i], cr->cprob[i], v->as.ewma.N);
 
 		if (ev->cprob[i] > max) {
 			max = ev->cprob[i];
-			max_label = i + 1;
+			max_label = i;
 		}
 	}
 
@@ -61,7 +61,7 @@ static bool _verdict_new_classification(struct spi *spi, const char *evname, voi
 	if (debug >= 5) {
 		dbg(-1, "%s %-21s predicted as %d probs ",
 			spi_proto2a(ep->proto), spi_epa2a(ep->epa), cr->result);
-		for (i = 0; i < 10; i++)
+		for (i = 1; i < 10; i++)
 			dbg(-1, "%.2f ", cr->cprob[i]);
 		dbg(-1, "\n");
 	}
