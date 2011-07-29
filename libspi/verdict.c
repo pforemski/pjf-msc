@@ -52,9 +52,20 @@ static bool _verdict_new_classification(struct spi *spi, const char *evname, voi
 {
 	struct verdict *v = spi->vdata;
 	struct spi_classresult *cr = arg;
+	struct spi_ep *ep = cr->ep;
+	int i;
 	spi_label_t old_value;
 
 	old_value = cr->ep->verdict;
+
+	if (debug >= 5) {
+		dbg(-1, "%s %-21s predicted as %d probs ",
+			spi_proto2a(ep->proto), spi_epa2a(ep->epa), cr->result);
+		for (i = 0; i < 10; i++)
+			dbg(-1, "%.2f ", cr->cprob[i]);
+		dbg(-1, "\n");
+	}
+
 
 	/* update ep->verdict_prob and fetch new verdict value */
 	switch (v->type) {

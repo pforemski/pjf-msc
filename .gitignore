@@ -8,3 +8,4 @@
 /spid/db.conf
 /spid/test/*.pcap
 /spid/test/*.txt
+/libspi/libsvm-3.1

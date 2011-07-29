@@ -85,6 +85,8 @@ spi_label_t proto_label(const char *proto)
 		label = ++spid->label_count;
 		thash_set_uint(spid->proto2label, proto, label);
 		thash_uint_set(spid->label2proto, label, mmatic_strdup(spid->mm, proto));
+
+		dbg(4, "registered protocol '%s' as label %d\n", proto, label);
 	}
 
 	return label;
@@ -363,6 +365,12 @@ int main(int argc, char *argv[])
 
 	/* init libspi and add learning sources */
 	spid->spi = spi_init(&spid->spi_opts);
+
+	/* register "unknown" as 1 */
+	proto_label("unknown");
+
+	/* init random */
+	srandom(time(NULL));
 
 	if (tlist_count(spid->learn) > 0) {
 		if (!start_sourcelist(spid->learn))

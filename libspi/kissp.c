@@ -176,8 +176,7 @@ static void _svm_train(struct spi *spi)
 
 	/* destroy previous model */
 	if (kissp->as.svm.model)
-		svm_destroy_model(kissp->as.svm.model);
-//		svm_free_and_destroy_model(&kissp->as.svm.model);
+		svm_free_and_destroy_model(&kissp->as.svm.model);
 
 	/* run */
 	kissp->as.svm.model = svm_train(&p, &kissp->as.svm.params);
@@ -375,6 +374,13 @@ static struct spi_signature *_signature_compute_eat(struct spi *spi, struct spi_
 	if (ep->source->label)
 		sign->label = ep->source->label;
 
+	if (debug >= 5) {
+		dbg(-1, "%s %-21s ", spi_proto2a(ep->proto), spi_epa2a(ep->epa));
+		for (i = 0; sign->c[i].index > 0; i++)
+			dbg(-1, "%.3f ", sign->c[i].value);
+		dbg(-1, "\n");
+	}
+
 	return sign;
 }
 
@@ -410,8 +416,6 @@ static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 			spi_train(spi, sign);
 			ep->source->learned++;
 			spi->learned_pkt++;
-
-			dbg(5, "learned proto %d from ep %s\n", sign->label, spi_epa2a(ep->epa));
 		} else {
 			_predict(spi, sign, ep);
 			spi_signature_free(sign);
