@@ -58,7 +58,7 @@ static bool _verdict_new_classification(struct spi *spi, const char *evname, voi
 
 	old_value = cr->ep->verdict;
 
-	if (debug >= 5) {
+	if (debug >= 4) {
 		dbg(-1, "%s %-21s predicted as %d probs ",
 			spi_proto2a(ep->proto), spi_epa2a(ep->epa), cr->result);
 		for (i = 1; i < 10; i++)
