@@ -15,9 +15,8 @@
 /** Number of additional features in KISS+ vs KISS */
 #define SPI_KISSP_FEATURES 4
 
-/** Number of random samples
- * An estimate would be 3^features */
-#define SPI_KISSP_RANDOMS 100
+/** Factor of random samples */
+#define SPI_KISSP_RANDOM_FACT 0.1
 
 /** Internal KISSP data */
 struct kissp {

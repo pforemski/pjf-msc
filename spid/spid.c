@@ -369,9 +369,6 @@ int main(int argc, char *argv[])
 	/* register "unknown" as 1 */
 	proto_label("unknown");
 
-	/* init random */
-	srandom(time(NULL));
-
 	if (tlist_count(spid->learn) > 0) {
 		if (!start_sourcelist(spid->learn))
 			return 2;

@@ -10,6 +10,46 @@
 #include "kissp.h"
 #include "ep.h"
 
+static void _randoms_update(struct spi *spi)
+{
+	struct kissp *kissp = spi->cdata;
+	struct spi_signature *sign;
+	int i, j, k;
+
+	if (!kissp->randoms) {
+		kissp->randoms = tlist_create(spi_signature_free, spi->mm);
+		srandom(time(NULL));
+	}
+
+	/* desired number of randoms */
+	k = MAX(10, SPI_KISSP_RANDOM_FACT * tlist_count(spi->traindata));
+
+	for (i = tlist_count(kissp->randoms); i < k; i++) {
+		sign = mmatic_zalloc(spi->mm, sizeof *sign);
+		sign->c = mmatic_zalloc(spi->mm, sizeof(*sign->c) * (kissp->feature_num + 1));
+		sign->label = SPI_LABEL_UNKNOWN;
+
+		/* fill with random data */
+		for (j = 0; j < kissp->feature_num; j++) {
+			sign->c[j].index = j + 1;
+			sign->c[j].value = (double) (random() % 1001) / 1000.0;
+		}
+
+		/* ending coordinate */
+		sign->c[j].index = -1;
+
+		/* store */
+		tlist_push(kissp->randoms, sign);
+
+		if (debug > 8) {
+			dbg(-1, "random %d: ", i);
+			for (j = 0; sign->c[j].index > 0; j++)
+				dbg(-1, "%.3f ", sign->c[j].value);
+			dbg(-1, "\n");
+		}
+	}
+}
+
 /********** liblinear */
 static void _linear_print_func(const char *msg)
 {
@@ -434,41 +474,6 @@ static void _predict(struct spi *spi, struct spi_signature *sign, struct spi_ep 
 	}
 }
 
-static void _randoms_init(struct spi *spi)
-{
-	struct kissp *kissp = spi->cdata;
-	struct spi_signature *sign;
-	int i, j;
-
-	srandom(time(NULL));
-	kissp->randoms = tlist_create(spi_signature_free, spi->mm);
-
-	for (i = 0; i < SPI_KISSP_RANDOMS; i++) {
-		sign = mmatic_zalloc(spi->mm, sizeof *sign);
-		sign->c = mmatic_zalloc(spi->mm, sizeof(*sign->c) * (kissp->feature_num + 1));
-		sign->label = SPI_LABEL_UNKNOWN;
-
-		/* fill with random data */
-		for (j = 0; j < kissp->feature_num; j++) {
-			sign->c[j].index = j + 1;
-			sign->c[j].value = (double) (random() % 101) / 100.0;
-		}
-
-		/* ending coordinate */
-		sign->c[j].index = -1;
-
-		/* store */
-		tlist_push(kissp->randoms, sign);
-
-		if (debug > 8) {
-			dbg(-1, "random %d: ", i);
-			for (j = 0; sign->c[j].index > 0; j++)
-				dbg(-1, "%.3f ", sign->c[j].value);
-			dbg(-1, "\n");
-		}
-	}
-}
-
 /********** event handlers */
 
 /** Receives "endpointPacketsReady */
@@ -500,6 +505,8 @@ static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 static bool _train(struct spi *spi, const char *evname, void *data)
 {
 	struct kissp *kissp = spi->cdata;
+
+	_randoms_update(spi);
 
 	dbg(2, "training with %u samples in traindata + %u randoms\n",
 		tlist_count(spi->traindata), tlist_count(kissp->randoms));
@@ -539,9 +546,6 @@ void kissp_init(struct spi *spi)
 		kissp->options.pktstats = true;
 		kissp->feature_num = spi->options.N*2 + SPI_KISSP_FEATURES;
 	}
-
-	/* generate randoms */
-	_randoms_init(spi);
 
 	/* initialize underlying classifier library */
 	if (spi->options.kiss_linear) {
