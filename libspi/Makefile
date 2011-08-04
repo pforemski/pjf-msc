@@ -8,7 +8,7 @@ TARGETS=libspi.so
 include rules.mk
 
 libsvm-3.1/svm.o:
-	$(MAKE) -C libsvm-3.1/
+	$(MAKE) -C libsvm-3.1/ svm.o
 
 libspi.so: $(C_OBJECTS)
 	$(CC) $(C_OBJECTS) $(LDFLAGS) -shared -o libspi.so

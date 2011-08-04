@@ -1,10 +1,14 @@
 #!/bin/bash
 
 set="${1:-1}"
-cmd="./spid --signdb=./test/signdb --kiss-linear ./test/$set.pcap"
+shift
+
+#cmd="./spid --signdb=./test/signdb --kiss-linear ./test/$set.pcap"
+cmd="./spid --signdb=./test/signdb ./test/$set.pcap $@"
+
 echo "$cmd"
 
-time $cmd 2> ./test/last.txt
+time $cmd 2>&1 | sort > ./test/last.txt
 cat ./test/last.txt
 
 if [[ -f test/$set.txt ]]; then
