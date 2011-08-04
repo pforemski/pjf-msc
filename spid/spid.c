@@ -30,15 +30,18 @@ static void help(void)
 	printf("                   protocol interface [filter]\n");
 	printf("  --signdb=<path>  signature database file\n");
 	printf("\n");
-	printf("  --kiss-std       use standard KISS algorithm\n");
+	printf("  --kiss-std       use standard KISS algorithm without flow extensions\n");
 	printf("  --kiss-linear    use liblinear instead of libsvm\n");
+	printf("\n");
+	printf("  --verdict-threshold=<t>\n");
+	printf("                   treat verdicts with probability below <t>%% as unknowns [%.0f]\n",
+		SPI_DEFAULT_VERDICT_THRESHOLD * 100);
+	printf("  --verdict-simple use simple verdict issuer\n");
+	printf("  --verdict-best   use 'best' verdict issuer\n");
 	printf("  --verdict-ewma-len=<num>\n");
 	printf("                   set length of EWMA verdict issuer\n");
-	printf("  --verdict-simple use simple verdict issuer\n");
-	printf("  --verdict-threshold=<t>\n");
-	printf("                   treat verdicts with probability below <t>%% as unknowns\n");
 	printf("\n");
-	printf("  --print-probs    print probabilities\n");
+	printf("  --print-probs    print classification probability\n");
 	printf("  --daemonize,-d   daemonize and syslog\n");
 	printf("  --pidfile=<path> where to write daemon PID to [%s]\n", SPID_PIDFILE);
 	printf("  --verbose        be verbose (ie. --debug=5)\n");
@@ -208,6 +211,7 @@ static int parse_config(int argc, char *argv[])
 		{ "verdict-simple",    0, NULL, 13 },
 		{ "verdict-threshold", 1, NULL, 14 },
 		{ "print-probs",       0, NULL, 15 },
+		{ "verdict-best",      0, NULL, 16 },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -219,6 +223,7 @@ static int parse_config(int argc, char *argv[])
 	spid->spi_opts.N = SPI_DEFAULT_N;
 	spid->spi_opts.P = SPI_DEFAULT_P;
 	spid->spi_opts.C = SPI_DEFAULT_C;
+	spid->spi_opts.verdict_threshold = SPI_DEFAULT_VERDICT_THRESHOLD;
 
 	for (;;) {
 		c = getopt_long(argc, argv, short_opts, long_opts, &i);
@@ -251,6 +256,7 @@ static int parse_config(int argc, char *argv[])
 			case 13 : spid->spi_opts.verdict_simple = true; break;
 			case 14 : spid->spi_opts.verdict_threshold = ((double) atoi(optarg)) / 100.0; break;
 			case 15 : spid->options.print_prob = true; break;
+			case 16 : spid->spi_opts.verdict_best = true; break;
 			default: help(); return 2;
 		}
 	}
@@ -296,13 +302,17 @@ static bool _verdict_changed(struct spi *spi, const char *evname, void *arg)
 {
 	struct spi_ep *ep = arg;
 
+	dbg(-1, "%s: %s %s is %s",
+		spi_src2a(ep->source),
+		spi_proto2a(ep->proto),
+		spi_epa2a(ep->epa),
+		label_proto(ep->verdict));
+
 	if (spid->options.print_prob) {
-		dbg(-1, "%s %s is %s %.0f %u\n",
-			spi_proto2a(ep->proto), spi_epa2a(ep->epa), label_proto(ep->verdict),
+		dbg(-1, " %.0f %u\n",
 			ep->verdict_prob * 100.0, ep->verdict_count);
 	} else {
-		dbg(-1, "%s %s is %s\n",
-			spi_proto2a(ep->proto), spi_epa2a(ep->epa), label_proto(ep->verdict));
+		dbg(-1, "\n");
 	}
 
 	return true;

@@ -21,7 +21,8 @@ struct verdict {
 	/** type of verdict decision */
 	enum verdict_t {
 		SPI_VERDICT_SIMPLE,
-		SPI_VERDICT_EWMA
+		SPI_VERDICT_EWMA,
+		SPI_VERDICT_BEST
 	} type;
 
 	/** type-dependent info */

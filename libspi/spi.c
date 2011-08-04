@@ -70,6 +70,7 @@ static void _options_defaults(struct spi *spi)
 	spi->options.N = SPI_DEFAULT_N;
 	spi->options.P = SPI_DEFAULT_P;
 	spi->options.C = SPI_DEFAULT_C;
+	spi->options.verdict_threshold = SPI_DEFAULT_VERDICT_THRESHOLD;
 }
 
 /** Garbage collector */

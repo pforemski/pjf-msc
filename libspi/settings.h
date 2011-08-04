@@ -16,6 +16,9 @@
 /** Number of payload bytes to analyze */
 #define SPI_DEFAULT_N 12
 
+/** Default verdict probability threshold */
+#define SPI_DEFAULT_VERDICT_THRESHOLD 0.6
+
 /** Garbage collector interval */
 #define SPI_GC_INTERVAL 10
 

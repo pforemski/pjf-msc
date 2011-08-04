@@ -79,6 +79,22 @@ static inline const char *spi_epa2a(spi_epaddr_t epa)
 	return buf;
 }
 
+/** Print source information */
+static inline const char *spi_src2a(struct spi_source *src)
+{
+	char *n;
+
+	if (src->type == SPI_SOURCE_FILE) {
+		n = strrchr(src->as.file.path, '/');
+		if (n)
+			return n + 1;
+		else
+			return src->as.file.path;
+	} else if (src->type == SPI_SOURCE_SNIFF) {
+		return src->as.sniff.ifname;
+	}
+}
+
 /** Print transport protocol name */
 #define spi_proto2a(p) (p == SPI_PROTO_UDP ? "UDP" : "TCP")
 
