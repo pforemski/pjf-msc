@@ -110,7 +110,7 @@ struct spi_ep {
 
 	struct timeval last;                /** time of last packet (for GC) */
 	tlist *pkts;                        /** collected packets */
-	bool pending;                       /** true if tlist_count(pkts) >= C */
+	bool gclock;                        /** true if endpoint must not be wiped out by GC */
 
 	spi_label_t verdict;                /** current verdict */
 	double verdict_prob;                /** current verdict probability */

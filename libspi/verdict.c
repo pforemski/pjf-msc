@@ -58,14 +58,32 @@ static bool _verdict_new_classification(struct spi *spi, const char *evname, voi
 
 	old_value = cr->ep->verdict;
 
+	double m1 = 0.0, m2 = 0.0;
+	for (i = 1; i < 10; i++) {
+		if (cr->cprob[i] > m2) {
+			if (cr->cprob[i] > m1) {
+				m2 = m1;
+				m1 = cr->cprob[i];
+			} else {
+				m2 = cr->cprob[i];
+			}
+		}
+	}
+
 	if (debug >= 4) {
 		dbg(-1, "%s %-21s predicted as %d probs ",
 			spi_proto2a(ep->proto), spi_epa2a(ep->epa), cr->result);
+
 		for (i = 1; i < 10; i++)
 			dbg(-1, "%.2f ", cr->cprob[i]);
-		dbg(-1, "\n");
+		dbg(-1, "  : diff %g -> %s\n", (m1-m2), (m1-m2) > 0.7 ? "OK" : "ignore");
 	}
 
+	/* TODO: ignore if uncertain */
+	if (m1-m2 <= 0.75) {
+		ep->gclock = false;
+		return true;
+	}
 
 	/* update ep->verdict_prob and fetch new verdict value */
 	switch (v->type) {
@@ -77,15 +95,27 @@ static bool _verdict_new_classification(struct spi *spi, const char *evname, voi
 			break;
 	}
 
-	/* treat as "unknown" if below threshold */
+	/* FIXME: treat as "unknown" if below threshold */
 	if (spi->options.verdict_threshold > 0.0 && cr->ep->verdict_prob < spi->options.verdict_threshold)
 		cr->ep->verdict = 0;
 
-	dbg(9, "ep %s is %u\n", spi_epa2a(cr->ep->epa), cr->ep->verdict);
-
-	/* announce verdict only if it changed */
-	if (old_value != cr->ep->verdict)
+	/* quit if verdict did not change */
+	if (old_value == cr->ep->verdict) {
+		ep->gclock = false;
+	} else {
+		dbg(9, "ep %s is %u\n", spi_epa2a(cr->ep->epa), cr->ep->verdict);
 		spi_announce(spi, "endpointVerdictChanged", 0, cr->ep, false);
+	}
+
+	return true;
+}
+
+static bool _verdict_eaten(struct spi *spi, const char *evname, void *arg)
+{
+	struct spi_ep *ep = arg;
+
+	/* information consumed by listener - mark endpoint as GC-possible */
+	ep->gclock = false;
 
 	return true;
 }
@@ -97,6 +127,7 @@ void verdict_init(struct spi *spi)
 	struct verdict *v;
 
 	spi_subscribe(spi, "endpointClassification", _verdict_new_classification, false);
+	spi_subscribe_after(spi, "endpointVerdictChanged", _verdict_eaten, false);
 
 	v = mmatic_zalloc(spi->mm, sizeof *v);
 	spi->vdata = v;

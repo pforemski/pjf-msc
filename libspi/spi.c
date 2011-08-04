@@ -105,8 +105,8 @@ static void _gc(int fd, short evtype, void *arg)
 	}
 
 	thash_iter_loop(spi->eps, key, ep) {
-		/* skip eps waiting for classification */
-		if (ep->pending) {
+		/* skip eps under use */
+		if (ep->gclock) {
 			eps++;
 			continue;
 		}

@@ -16,7 +16,7 @@
 #define SPI_KISSP_FEATURES 4
 
 /** Factor of random samples */
-#define SPI_KISSP_RANDOM_FACT 0.1
+#define SPI_KISSP_RANDOM_FACT 0.5
 
 /** Internal KISSP data */
 struct kissp {

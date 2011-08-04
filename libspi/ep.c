@@ -68,8 +68,8 @@ struct spi_ep *ep_new_pkt(struct spi_source *source, spi_proto_t proto, spi_epad
 	tlist_push(ep->pkts, pkt);
 
 	/* generate event if pkts big enough */
-	if (!ep->pending && tlist_count(ep->pkts) >= spi->options.C) {
-		ep->pending = true;
+	if (!ep->gclock && tlist_count(ep->pkts) >= spi->options.C) {
+		ep->gclock = true;
 		spi_announce(spi, "endpointPacketsReady", 0, ep, false);
 		dbg(7, "ep %s ready\n", spi_epa2a(epa));
 	}

@@ -21,6 +21,8 @@ static void _randoms_update(struct spi *spi)
 		srandom(time(NULL));
 	}
 
+	return;
+
 	/* desired number of randoms */
 	k = MAX(10, SPI_KISSP_RANDOM_FACT * tlist_count(spi->traindata));
 
@@ -132,7 +134,7 @@ static void _linear_train(struct spi *spi)
 	mmatic_freeptr(p.y);
 }
 
-static void _linear_predict(struct spi *spi, struct spi_signature *sign, struct spi_ep *ep)
+static bool _linear_predict(struct spi *spi, struct spi_signature *sign, struct spi_ep *ep)
 {
 	struct kissp *kissp = spi->cdata;
 	struct spi_classresult *cr;
@@ -141,7 +143,7 @@ static void _linear_predict(struct spi *spi, struct spi_signature *sign, struct 
 
 	if (!kissp->as.linear.model) {
 		dbg(1, "cant classify: no model\n");
-		return;
+		return false;
 	}
 
 	cr = mmatic_zalloc(spi->mm, sizeof *cr);
@@ -166,6 +168,7 @@ static void _linear_predict(struct spi *spi, struct spi_signature *sign, struct 
 	}
 
 	spi_announce(spi, "endpointClassification", 0, cr, true);
+	return true;
 }
 
 /********** libsvm */
@@ -258,7 +261,7 @@ static void _svm_train(struct spi *spi)
 	mmatic_freeptr(p.y);
 }
 
-static void _svm_predict(struct spi *spi, struct spi_signature *sign, struct spi_ep *ep)
+static bool _svm_predict(struct spi *spi, struct spi_signature *sign, struct spi_ep *ep)
 {
 	struct kissp *kissp = spi->cdata;
 	struct spi_classresult *cr;
@@ -267,7 +270,7 @@ static void _svm_predict(struct spi *spi, struct spi_signature *sign, struct spi
 
 	if (!kissp->as.svm.model) {
 		dbg(1, "cant classify: no model\n");
-		return;
+		return false;
 	}
 
 	cr = mmatic_zalloc(spi->mm, sizeof *cr);
@@ -291,6 +294,7 @@ static void _svm_predict(struct spi *spi, struct spi_signature *sign, struct spi
 	}
 
 	spi_announce(spi, "endpointClassification", 0, cr, true);
+	return true;
 }
 
 /********** signature generation */
@@ -459,19 +463,24 @@ static struct spi_signature *_signature_compute_eat(struct spi *spi, struct spi_
 	return sign;
 }
 
-/** Make classification of given signature */
-static void _predict(struct spi *spi, struct spi_signature *sign, struct spi_ep *ep)
+/** Make classification of given signature
+ * @retval false   no classification result
+ * @retval true    classification result issued
+ */
+static bool _predict(struct spi *spi, struct spi_signature *sign, struct spi_ep *ep)
 {
 	struct kissp *kissp = spi->cdata;
 
 	switch (kissp->options.method) {
 		case KISSP_LIBLINEAR:
-			_linear_predict(spi, sign, ep);
+			return _linear_predict(spi, sign, ep);
 			break;
 		case KISSP_LIBSVM:
-			_svm_predict(spi, sign, ep);
+			return _svm_predict(spi, sign, ep);
 			break;
 	}
+
+	return false;
 }
 
 /********** event handlers */
@@ -491,13 +500,17 @@ static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 			spi_train(spi, sign);
 			ep->source->learned++;
 			spi->learned_pkt++;
+
+			ep->gclock = false;
 		} else {
-			_predict(spi, sign, ep);
+			/* if no class. result - tag ep as gc-possible */
+			if (!_predict(spi, sign, ep))
+				ep->gclock = false;
+
 			spi_signature_free(sign);
 		}
 	}
 
-	ep->pending = false;
 	return true;
 }
 
