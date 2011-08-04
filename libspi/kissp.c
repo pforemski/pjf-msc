@@ -10,48 +10,6 @@
 #include "kissp.h"
 #include "ep.h"
 
-static void _randoms_update(struct spi *spi)
-{
-	struct kissp *kissp = spi->cdata;
-	struct spi_signature *sign;
-	int i, j, k;
-
-	if (!kissp->randoms) {
-		kissp->randoms = tlist_create(spi_signature_free, spi->mm);
-		srandom(time(NULL));
-	}
-
-	return;
-
-	/* desired number of randoms */
-	k = MAX(10, SPI_KISSP_RANDOM_FACT * tlist_count(spi->traindata));
-
-	for (i = tlist_count(kissp->randoms); i < k; i++) {
-		sign = mmatic_zalloc(spi->mm, sizeof *sign);
-		sign->c = mmatic_zalloc(spi->mm, sizeof(*sign->c) * (kissp->feature_num + 1));
-		sign->label = SPI_LABEL_UNKNOWN;
-
-		/* fill with random data */
-		for (j = 0; j < kissp->feature_num; j++) {
-			sign->c[j].index = j + 1;
-			sign->c[j].value = (double) (random() % 1001) / 1000.0;
-		}
-
-		/* ending coordinate */
-		sign->c[j].index = -1;
-
-		/* store */
-		tlist_push(kissp->randoms, sign);
-
-		if (debug > 8) {
-			dbg(-1, "random %d: ", i);
-			for (j = 0; sign->c[j].index > 0; j++)
-				dbg(-1, "%.3f ", sign->c[j].value);
-			dbg(-1, "\n");
-		}
-	}
-}
-
 /********** liblinear */
 static void _linear_print_func(const char *msg)
 {
@@ -87,10 +45,11 @@ static void _linear_train(struct spi *spi)
 	const char *err;
 
 	/* describe the problem */
-	p.l = tlist_count(spi->traindata) + tlist_count(kissp->randoms);
+	p.l = tlist_count(spi->traindata);
 	p.n = kissp->feature_num;
 	p.x = mmatic_alloc(spi->mm, (sizeof (void *)) * p.l);
 	p.y = mmatic_alloc(spi->mm, (sizeof (int)) * p.l);
+	p.bias = -1.0;
 
 	i = 0;
 	tlist_iter_loop(spi->traindata, s) {
@@ -98,15 +57,6 @@ static void _linear_train(struct spi *spi)
 		p.y[i] = s->label;
 		i++;
 	}
-
-	/* add randoms */
-	tlist_iter_loop(kissp->randoms, s) {
-		p.x[i] = (struct feature_node *) s->c;
-		p.y[i] = s->label;
-		i++;
-	}
-
-	p.bias = -1.0;
 
 	/* check */
 	err = check_parameter(&p, &kissp->as.linear.params);
@@ -219,20 +169,13 @@ static void _svm_train(struct spi *spi)
 	const char *err;
 
 	/* describe the problem */
-	p.l = tlist_count(spi->traindata) + tlist_count(kissp->randoms);
+	p.l = tlist_count(spi->traindata);
 	p.x = mmatic_alloc(spi->mm, (sizeof (void *)) * p.l);
 	p.y = mmatic_alloc(spi->mm, (sizeof (double)) * p.l);
 
 	i = 0;
 	tlist_iter_loop(spi->traindata, s) {
 		p.x[i] = (struct svm_node *) s->c;   /* NB: identical */
-		p.y[i] = s->label;
-		i++;
-	}
-
-	/* add randoms */
-	tlist_iter_loop(kissp->randoms, s) {
-		p.x[i] = (struct svm_node *) s->c;
 		p.y[i] = s->label;
 		i++;
 	}
@@ -519,10 +462,7 @@ static bool _train(struct spi *spi, const char *evname, void *data)
 {
 	struct kissp *kissp = spi->cdata;
 
-	_randoms_update(spi);
-
-	dbg(2, "training with %u samples in traindata + %u randoms\n",
-		tlist_count(spi->traindata), tlist_count(kissp->randoms));
+	dbg(2, "training with %u samples in traindata\n", tlist_count(spi->traindata));
 
 	switch (kissp->options.method) {
 		case KISSP_LIBLINEAR:

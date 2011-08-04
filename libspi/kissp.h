@@ -15,13 +15,9 @@
 /** Number of additional features in KISS+ vs KISS */
 #define SPI_KISSP_FEATURES 4
 
-/** Factor of random samples */
-#define SPI_KISSP_RANDOM_FACT 0.5
-
 /** Internal KISSP data */
 struct kissp {
 	int feature_num;         /** number of signature coordinates */
-	tlist *randoms;          /** random signatures for "unknown" protocol */
 
 	/** KISSP options */
 	struct {
