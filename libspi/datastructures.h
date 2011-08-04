@@ -124,6 +124,7 @@ struct spi_classresult {
 	struct spi_ep *ep;                      /** endpoint */
 	spi_label_t result;                     /** most probable result */
 	spi_cprob_t cprob;                      /** classification probabilities */
+	spi_cprob_t cprob_lib;                  /** classification probabilities from underlying library */
 };
 
 /** Represents a flow */
