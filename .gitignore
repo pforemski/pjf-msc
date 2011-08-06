@@ -10,3 +10,4 @@
 /spid/test/*.txt
 /libspi/libsvm-*
 /libspi/liblinear-*
+/polsl/*.pdf
