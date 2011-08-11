@@ -302,17 +302,17 @@ static bool _verdict_changed(struct spi *spi, const char *evname, void *arg)
 {
 	struct spi_ep *ep = arg;
 
-	dbg(-1, "%s: %s %s is %s",
+	printf("%s: %s %s is %s",
 		spi_src2a(ep->source),
 		spi_proto2a(ep->proto),
 		spi_epa2a(ep->epa),
 		label_proto(ep->verdict));
 
 	if (spid->options.print_prob) {
-		dbg(-1, " %.0f %u\n",
+		printf( " %.0f %u\n",
 			ep->verdict_prob * 100.0, ep->verdict_count);
 	} else {
-		dbg(-1, "\n");
+		printf("\n");
 	}
 
 	return true;

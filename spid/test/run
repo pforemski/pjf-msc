@@ -8,7 +8,7 @@ cmd="./spid --signdb=./test/signdb ./test/$set.pcap $@"
 
 echo "$cmd"
 
-time $cmd 2>&1 | sort > ./test/last.txt
+time $cmd | sort > ./test/last.txt
 cat ./test/last.txt
 
 if [[ -f test/$set.txt ]]; then
