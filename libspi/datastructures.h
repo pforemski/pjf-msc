@@ -53,6 +53,7 @@ struct spi_source {
 	struct spi *spi;                    /** root node */
 	spi_source_t type;                  /** source type */
 	spi_label_t label;                  /** associated source label (for learning) */
+	bool testing;                       /** this source is for performance testing */
 
 	int fd;                             /** underlying fd to monitor for read() possibility */
 	struct event *evread;               /** fd read event */
@@ -110,6 +111,9 @@ struct spi_ep {
 	double verdict_prob;                /** current verdict probability */
 	uint32_t verdict_count;             /** number of verdicts so far */
 
+	bool testing;                       /** endpoint for testing */
+	uint32_t predictions;               /** number of predictions made */
+
 	void *vdata;                        /** classifier verdict internal data */
 };
 
@@ -154,6 +158,19 @@ struct spi_options {
 	int  verdict_ewma_len;              /** length of EWMA verdict issuer history */
 };
 
+/** Performance data */
+struct spi_stats {
+	uint32_t learned_pkt;                /** number of signatures learned from packet sources */
+	uint32_t learned_tq;                 /** number of signatures learned from training queues */
+
+	uint32_t test_all;                   /** total number of endpoints which provided a "test verdict" */
+	uint32_t test_is[SPI_LABEL_MAX + 1]; /** ...and number of such endpoints for each label */
+
+	uint32_t test_ok;                    /** total number of valid "test verdicts" */
+	uint32_t test_FN[SPI_LABEL_MAX + 1]; /** ...endpoint classification is a False Negative */
+	uint32_t test_FP[SPI_LABEL_MAX + 1]; /** ...endpoint classification is a False Positive */
+};
+
 /** Main data root */
 struct spi {
 	mmatic *mm;                         /** global mm */
@@ -177,8 +194,7 @@ struct spi {
 	tlist *traindata;                   /** signatures for training: list of struct spi_signature */
 	tlist *trainqueue;                  /** signatures to be added to traindata */
 
-	uint32_t learned_pkt;               /** number of signatures learned from packet sources */
-	uint32_t learned_tq;                /** number of signatures learned from training queues */
+	struct spi_stats stats;             /** performance measurement */
 
 	void *cdata;                        /** classifiers private data */
 	void *vdata;                        /** verdict private data */

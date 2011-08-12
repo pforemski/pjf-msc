@@ -374,9 +374,6 @@ static struct spi_signature *_signature_compute_eat(struct spi *spi, struct spi_
 	mmatic_freeptr(o);
 	tlist_free(delays);
 
-	if (ep->source->label)
-		sign->label = ep->source->label;
-
 	if (debug >= 5) {
 		dbg(-1, "%s %-21s ", spi_proto2a(ep->proto), spi_epa2a(ep->epa));
 		for (i = 0; sign->c[i].index > 0; i++)
@@ -414,21 +411,28 @@ static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 {
 	struct spi_ep *ep = data;
 	struct spi_signature *sign;
+	int rc;
 
 	while (tlist_count(ep->pkts) >= spi->options.C) {
 		sign = _signature_compute_eat(spi, ep);
 		ep->source->samples++;
 
-		/* if a labelled sample, learn from it */
-		if (sign->label) {
+		/* if a learning source, submit as a training sample */
+		if (ep->source->label && !ep->testing) {
+			sign->label = ep->source->label;
+
 			spi_train(spi, sign);
 			ep->source->learned++;
-			spi->learned_pkt++;
+			spi->stats.learned_pkt++;
 
 			ep->gclock = false;
 		} else {
+			/* make a prediction */
+			rc = _predict(spi, sign, ep);
+			ep->predictions++;
+
 			/* if no class. result - tag ep as gc-possible */
-			if (!_predict(spi, sign, ep))
+			if (!rc)
 				ep->gclock = false;
 
 			spi_signature_free(sign);

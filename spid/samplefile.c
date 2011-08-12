@@ -64,7 +64,7 @@ int sf_read(struct spid *spid, const char *path)
 		}
 
 		if (i == cols - 2) {
-			spi_trainqueue_add(spid->spi, sign);
+			spi_trainqueue(spid->spi, sign);
 			j++;
 		} else {
 			dbg(2, "%s#%d: invalid number of columns (%d, expected %d)\n",

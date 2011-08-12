@@ -21,8 +21,29 @@ static char *_k(struct spi_source *source, spi_proto_t proto, spi_epaddr_t epa)
 
 /******************/
 
+/** Handle moment in which endpoint is deleted */
 void ep_destroy(struct spi_ep *ep)
 {
+	struct spi_source *source = ep->source;
+	struct spi_stats *stats = &(source->spi->stats);
+
+	/* a testing endpoint: update performance metrics */
+	if (ep->testing && ep->predictions > 0) {
+		stats->test_all++;
+		stats->test_is[source->label]++;
+
+		if (ep->verdict == source->label) {
+			stats->test_ok++;
+		} else {
+			stats->test_FN[source->label]++;
+			stats->test_FP[ep->verdict]++;
+
+			dbg(1, "%s: %s %s is %d but classified as %d\n",
+				spi_src2a(ep->source), spi_proto2a(ep->proto),
+				spi_epa2a(ep->epa), source->label, ep->verdict);
+		}
+	}
+
 	mmatic_free(ep->mm);
 }
 
@@ -44,6 +65,7 @@ struct spi_ep *ep_new_pkt(struct spi_source *source, spi_proto_t proto, spi_epad
 		ep->source = source;
 		ep->proto = proto;
 		ep->epa = epa;
+		ep->testing = source->testing;
 		thash_set(spi->eps, key, ep);
 
 		source->eps++;

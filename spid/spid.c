@@ -22,13 +22,15 @@ static void help(void)
 	printf("  Statistical Packet Inspection daemon\n");
 	printf("\n");
 	printf("Options:\n");
-	printf("  --learn=<lspec>  learn according to <lspec>:\n");
+	printf("  --learn=<lspec>  learn according to <lspec>, format:\n");
 	printf("                   protocol:file [filter]\n");
 	printf("                   protocol:interface [filter]\n");
-	printf("  --pktdb=<path>   read packets according to info in given <path>, line format:\n");
+	printf("  --learndb=<file> learn according to <file>, line format:\n");
 	printf("                   protocol file [filter]\n");
 	printf("                   protocol interface [filter]\n");
-	printf("  --signdb=<path>  signature database file\n");
+	printf("  --signdb=<file>  signature database file\n");
+	printf("  --test=<lspec>   as --learn, but use the source for testing\n");
+	printf("  --testdb=<file>  as --learndb, but use all sources for testing\n");
 	printf("\n");
 	printf("  --kiss-std       use standard KISS algorithm without flow extensions\n");
 	printf("  --kiss-linear    use liblinear instead of libsvm\n");
@@ -41,15 +43,17 @@ static void help(void)
 	printf("  --verdict-ewma-len=<num>\n");
 	printf("                   set length of EWMA verdict issuer\n");
 	printf("\n");
+	printf("  --stats          print performance statistics at the end\n");
 	printf("  --print-probs    print classification probability\n");
-	printf("  --daemonize,-d   daemonize and syslog\n");
-	printf("  --pidfile=<path> where to write daemon PID to [%s]\n", SPID_PIDFILE);
 	printf("  --verbose        be verbose (ie. --debug=5)\n");
 	printf("  --debug=<num>    set debugging level\n");
+	printf("\n");
+	//printf("  --daemonize,-d   daemonize and syslog\n");
+	//printf("  --pidfile=<path> where to write daemon PID to [%s]\n", SPID_PIDFILE);
 	printf("  --help,-h        show this usage help screen\n");
 	printf("  --version,-v     show version and copying information\n");
 	printf("\n");
-	printf("You must provide either --pktdb or --signdb option.\n");
+	printf("You must provide either --learndb or --signdb option.\n");
 	printf("\n");
 	printf("Specify <traffic sources> for protocol detection according to:\n");
 	printf("  wlan0            interface with default 'tcp or udp' filter\n");
@@ -105,7 +109,7 @@ const char *label_proto(spi_label_t label)
 		return "unknown";
 }
 
-static bool parse_lspec_into_sourcelist(char *arg, tlist *sources)
+static bool parse_lspec_into_sourcelist(char *arg, tlist *sources, bool test)
 {
 	char *s;
 	struct source *src;
@@ -121,23 +125,25 @@ static bool parse_lspec_into_sourcelist(char *arg, tlist *sources)
 	src = mmatic_zalloc(spid->mm, sizeof *src);
 	src->proto = mmatic_strdup(spid->mm, arg);
 	src->cmd = mmatic_strdup(spid->mm, s);
+	src->test = test;
 
 	tlist_push(sources, src);
 	return true;
 }
 
-static void parse_sspec_into_sourcelist(char *arg, tlist *sources)
+static void parse_sspec_into_sourcelist(char *arg, tlist *sources, bool test)
 {
 	struct source *src;
 
 	src = mmatic_zalloc(spid->mm, sizeof *src);
 	src->proto = NULL;
 	src->cmd = mmatic_strdup(spid->mm, arg);
+	src->test = test;
 
 	tlist_push(sources, src);
 }
 
-static bool parse_dbfile_into_sourcelist(const char *path, tlist *sources)
+static bool parse_dbfile_into_sourcelist(const char *path, tlist *sources, bool test)
 {
 	FILE *fp;
 	char buf[BUFSIZ], *s, *p;
@@ -173,6 +179,7 @@ static bool parse_dbfile_into_sourcelist(const char *path, tlist *sources)
 		src = mmatic_zalloc(spid->mm, sizeof *src);
 		src->proto = mmatic_strdup(spid->mm, buf);
 		src->cmd = mmatic_strdup(spid->mm, s);
+		src->test = test;
 
 		tlist_push(sources, src);
 	}
@@ -203,7 +210,7 @@ static int parse_config(int argc, char *argv[])
 		{ "daemonize",   0, NULL,  5 },
 		{ "pidfile",     1, NULL,  6 },
 		{ "learn",       1, NULL,  7 },
-		{ "pktdb",       1, NULL,  8 },
+		{ "learndb",     1, NULL,  8 },
 		{ "signdb",      1, NULL,  9 },
 		{ "kiss-std",    0, NULL, 10 },
 		{ "kiss-linear", 0, NULL, 11 },
@@ -212,6 +219,9 @@ static int parse_config(int argc, char *argv[])
 		{ "verdict-threshold", 1, NULL, 14 },
 		{ "print-probs",       0, NULL, 15 },
 		{ "verdict-best",      0, NULL, 16 },
+		{ "test",        1, NULL,  17 },
+		{ "testdb",      1, NULL,  18 },
+		{ "stats",       0, NULL,  19 },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -240,12 +250,12 @@ static int parse_config(int argc, char *argv[])
 			case  5 : spid->options.daemonize = true; break;
 			case  6 : spid->options.pidfile = optarg; break;
 			case  7 :
-				if (!parse_lspec_into_sourcelist(optarg, spid->learn))
+				if (!parse_lspec_into_sourcelist(optarg, spid->learn, false))
 					return 2;
 				else
 					break;
 			case  8 :
-				if (!parse_dbfile_into_sourcelist(optarg, spid->learn))
+				if (!parse_dbfile_into_sourcelist(optarg, spid->learn, false))
 					return 2;
 				else
 					break;
@@ -257,19 +267,30 @@ static int parse_config(int argc, char *argv[])
 			case 14 : spid->spi_opts.verdict_threshold = ((double) atoi(optarg)) / 100.0; break;
 			case 15 : spid->options.print_prob = true; break;
 			case 16 : spid->spi_opts.verdict_best = true; break;
+			case 17 :
+				if (!parse_lspec_into_sourcelist(optarg, spid->detect, true))
+					return 2;
+				else
+					break;
+			case 18 :
+				if (!parse_dbfile_into_sourcelist(optarg, spid->detect, true))
+					return 2;
+				else
+					break;
+			case 19 : spid->options.stats = true; break;
 			default: help(); return 2;
 		}
 	}
 
 	/* check if there are any potential learning sources */
 	if (tlist_count(spid->learn) == 0 && !spid->options.signdb) {
-		dbg(0, "No learning sources. Provide --learn, --pktdb or --signdb options.\n");
+		dbg(0, "No learning sources. Provide --learn, --learndb or --signdb options.\n");
 		dbg(0, "Run spid --help for more info.\n");
 		return 2;
 	}
 
 	while (argc - optind > 0) {
-		parse_sspec_into_sourcelist(argv[optind], spid->detect);
+		parse_sspec_into_sourcelist(argv[optind], spid->detect, false);
 		optind++;
 	}
 
@@ -289,7 +310,7 @@ static bool start_sourcelist(tlist *sources)
 			type = SPI_SOURCE_SNIFF;
 		}
 
-		if ((rc = spi_source_add(spid->spi, type, proto_label(src->proto), src->cmd))) {
+		if ((rc = spi_add(spid->spi, type, proto_label(src->proto), src->test, src->cmd))) {
 			dbg(1, "starting source %s failed (rc=%d)\n", src->cmd, rc);
 			return false;
 		}
@@ -355,6 +376,43 @@ static void _sigint(int foo)
 	spi_stop(spid->spi);
 }
 
+/** Print stats */
+static void _print_stats()
+{
+	spi_label_t i;
+	const char *proto;
+	struct spi *spi = spid->spi;
+	int ok, err, total;
+	double fp, fn;
+	double avg_fp = 0.0, avg_fn = 0.0;
+
+	printf("Protocol statistics:\n");
+	for (i = 2; i <= spid->label_count; i++) {
+		proto = thash_uint_get(spid->label2proto, i);
+
+		fp = spi_stats_fp(spi, i);
+		fn = spi_stats_fn(spi, i);
+
+		avg_fp += (fp - avg_fp) / (i - 1);
+		avg_fn += (fn - avg_fn) / (i - 1);
+
+		printf("%15s FP %2.0f%% / FN %2.0f%% in %d\n",
+			proto, fp, fn, spi->stats.test_is[i]);
+	}
+
+	printf("%15s FP %2.0f%% / FN %2.0f%%\n",
+		"average", avg_fp, avg_fn);
+
+	ok = spi->stats.test_ok;
+	total = spi->stats.test_all;
+	err = total - ok;
+
+	printf("Endpoint statistics:\n");
+	printf("%15s %4d (%2.0f%%)\n", "valid", ok, 100.0 * ok / total);
+	printf("%15s %4d (%2.0f%%)\n", "invalid", err, 100.0 * err / total);
+	printf("%15s %4d (%2.0f%%)\n", "total", total, 100.0);
+}
+
 int main(int argc, char *argv[])
 {
 	mmatic *mm;
@@ -397,7 +455,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (tlist_count(spid->learn) == 0 && spid->spi->learned_tq == 0) {
+	if (tlist_count(spid->learn) == 0 && spid->spi->stats.learned_tq == 0) {
 		dbg(0, "No protocol signatures\n");
 		return 4;
 	}
@@ -413,9 +471,12 @@ int main(int argc, char *argv[])
 
 	while ((rc = spi_loop(spid->spi)) == 0);
 
-	if (spid->options.signdb && spid->spi->learned_pkt > 0) {
+	if (spid->options.signdb && spid->spi->stats.learned_pkt > 0) {
 		sf_write(spid, spid->options.signdb);
 	}
+
+	if (spid->options.stats)
+		_print_stats();
 
 	spi_free(spid->spi);
 	mmatic_free(mm);

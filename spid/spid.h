@@ -15,6 +15,7 @@
 struct source {
 	char *proto;
 	char *cmd;
+	bool test;
 };
 
 struct spid {
@@ -34,6 +35,7 @@ struct spid {
 		const char *pidfile;       /** PID file */
 		const char *signdb;        /** signature database file */
 		bool print_prob;           /** print probabilities */
+		bool stats;                /** print perf stats */
 	} options;
 };
 

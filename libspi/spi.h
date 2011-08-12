@@ -24,14 +24,15 @@
 struct spi *spi_init(struct spi_options *so);
 
 /** Add traffic source
- * @param type       type of the source (SPI_SOURCE_PCAP, ...)
- * @param label      if not 0, use as learning source for protocol with such numeric ID
+ * @param type       type of the source
+ * @param label      traffic label: if != 0 and param test is false, use this source for training
+ * @param test       use this source for testing
  * @param args       source-specific arguments to the source, parsed by relevant handler
  * @retval 0         success
  * @retval 1         failure
  * @retval <0        error specific to source
  */
-int spi_source_add(struct spi *spi, spi_source_t type, spi_label_t label, const char *args);
+int spi_add(struct spi *spi, spi_source_t type, spi_label_t label, bool test, const char *args);
 
 /** Make one iteration of the main spi loop
  * @retval  0        success
@@ -93,6 +94,7 @@ static inline const char *spi_src2a(struct spi_source *src)
 	} else if (src->type == SPI_SOURCE_SNIFF) {
 		return src->as.sniff.ifname;
 	}
+	return "?";
 }
 
 /** Print transport protocol name */
@@ -108,7 +110,7 @@ void spi_train(struct spi *spi, struct spi_signature *sign);
  * @param sign                signature
  * @param label               protocol label
  */
-void spi_trainqueue_add(struct spi *spi, struct spi_signature *sign);
+void spi_trainqueue(struct spi *spi, struct spi_signature *sign);
 
 /** Use the training samples queue and run re-learning immediately */
 void spi_trainqueue_commit(struct spi *spi);
@@ -117,5 +119,15 @@ void spi_trainqueue_commit(struct spi *spi);
  * @param arg                 address to memory occupied by a struct spi_signature
  */
 void spi_signature_free(void *arg);
+
+/** Get False Positive Percentage for given label
+ * @retval -1.0    result not available
+ */
+double spi_stats_fp(struct spi *spi, spi_label_t label);
+
+/** Get False Negative Percentage for given label
+ * @retval -1.0    result not available
+ */
+double spi_stats_fn(struct spi *spi, spi_label_t label);
 
 #endif

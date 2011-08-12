@@ -190,7 +190,7 @@ struct spi *spi_init(struct spi_options *so)
 
 	/*
 	 * setup events
-	 * NB: new packet events will be added in spi_source_add()
+	 * NB: new packet events will be added in spi_add()
 	 */
 
 	/* garbage collector */
@@ -211,12 +211,10 @@ struct spi *spi_init(struct spi_options *so)
 	/* initialize verdict */
 	verdict_init(spi);
 
-	/* TODO: statistics / diagnostics? */
-
 	return spi;
 }
 
-int spi_source_add(struct spi *spi, spi_source_t type, spi_label_t label, const char *args)
+int spi_add(struct spi *spi, spi_source_t type, spi_label_t label, bool test, const char *args)
 {
 	struct spi_source *source;
 	int (*initcb)(struct spi_source *source, const char *args);
@@ -227,6 +225,7 @@ int spi_source_add(struct spi *spi, spi_source_t type, spi_label_t label, const 
 	source->spi = spi;
 	source->type = type;
 	source->label = label;
+	source->testing = test;
 
 	/* callbacks */
 	switch (type) {
@@ -395,7 +394,7 @@ void spi_train(struct spi *spi, struct spi_signature *sign)
 	return;
 }
 
-void spi_trainqueue_add(struct spi *spi, struct spi_signature *sign)
+void spi_trainqueue(struct spi *spi, struct spi_signature *sign)
 {
 	tlist_push(spi->trainqueue, sign);
 }
@@ -406,11 +405,37 @@ void spi_trainqueue_commit(struct spi *spi)
 
 	tlist_iter_loop(spi->trainqueue, sign) {
 		tlist_push(spi->traindata, sign); /* @1 */
-		spi->learned_tq++;
+		spi->stats.learned_tq++;
 	}
 
 	tlist_flush(spi->trainqueue);
 	spi_announce(spi, "traindataUpdated", 0, NULL, false);
+}
+
+double spi_stats_fp(struct spi *spi, spi_label_t l)
+{
+	struct spi_stats *s = &spi->stats;
+	double negatives;
+
+	if (!s->test_all)
+		return -1.0;
+	else
+		negatives = s->test_all - s->test_is[l];
+
+	return negatives ? (100.0 * s->test_FP[l] / negatives) : 0.0;
+}
+
+double spi_stats_fn(struct spi *spi, spi_label_t l)
+{
+	struct spi_stats *s = &spi->stats;
+	double positives;
+
+	if (!s->test_all)
+		return -1.0;
+	else
+		positives = s->test_is[l];
+
+	return positives ? (100.0 * s->test_FN[l] / positives) : 0.0;
 }
 
 /*
