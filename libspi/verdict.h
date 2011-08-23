@@ -19,7 +19,7 @@ struct ewma_verdict {
 /** Global verdict data */
 struct verdict {
 	/** type of verdict decision */
-	enum verdict_t {
+	enum {
 		SPI_VERDICT_SIMPLE,
 		SPI_VERDICT_EWMA,
 		SPI_VERDICT_BEST
@@ -27,7 +27,7 @@ struct verdict {
 
 	/** type-dependent info */
 	union {
-		struct verdict_ewma_t {
+		struct {
 			uint16_t N;   /** EWMA length */
 		} ewma;
 	} as;
