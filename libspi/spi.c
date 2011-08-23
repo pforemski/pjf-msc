@@ -134,11 +134,12 @@ static bool _gc_suggested(struct spi *spi, const char *evname, void *data)
 static void _new_spi_event(int fd, short evtype, void *arg)
 {
 	struct spi_event *se = arg;
+	struct spi_subscribers *ss = se->ss;
 	struct spi *spi = se->spi;
 	union spi_ptr2eventcb_tool pf;
 
 	if (spi_pending(spi, se->evname))
-		thash_set(spi->aggstatus, se->evname, (void *) SPI_AGG_READY);
+		ss->aggstatus = SPI_AGG_READY;
 
 	/* handler list */
 	tlist_iter_loop(se->ss->hl, pf.ptr) {
@@ -178,7 +179,6 @@ struct spi *spi_init(struct spi_options *so)
 	spi->eps = thash_create_strkey(ep_destroy, mm);
 	spi->flows = thash_create_strkey(flow_destroy, mm);
 	spi->subscribers = thash_create_strkey(_subscriber_free, mm);
-	spi->aggstatus = thash_create_strkey(NULL, mm);
 	spi->traindata = tlist_create(spi_signature_free, spi->mm);
 	spi->trainqueue = tlist_create(NULL, spi->mm); /* @1: dont free */
 
@@ -276,30 +276,24 @@ void spi_announce(struct spi *spi, const char *evname, uint32_t delay_ms, void *
 {
 	struct spi_event *se;
 	struct timeval tv;
-	int s;
 	struct spi_subscribers *ss;
 
-	/* handle aggregation */
-	s = (int) thash_get(spi->aggstatus, evname);
-	switch (s) {
-		case SPI_AGG_IGNORE:
-			break;
-		case SPI_AGG_PENDING:
-			goto quit;
-		case SPI_AGG_READY:
-			thash_set(spi->aggstatus, evname, (void *) SPI_AGG_PENDING);
-			break;
+	/* get subscribers */
+	ss = thash_get(spi->subscribers, evname);
+	if (!ss)
+		goto quit;
+
+	/* handle event aggregation */
+	switch (ss->aggstatus) {
+		case SPI_AGG_DISABLED: break;
+		case SPI_AGG_READY:    ss->aggstatus = SPI_AGG_PENDING; break;
+		case SPI_AGG_PENDING:  goto quit;
 	}
 
 	if (delay_ms)
 		dbg(8, "event %s in %u ms\n", evname, delay_ms);
 	else
 		dbg(8, "event %s\n", evname);
-
-	/* get subscribers */
-	ss = thash_get(spi->subscribers, evname);
-	if (!ss)
-		goto quit;
 
 	se = mmatic_alloc(spi->mm, sizeof *se);
 	se->spi = spi;
@@ -331,17 +325,14 @@ static void _subscribe_to(struct spi *spi, const char *evname, spi_event_cb_t *c
 		ss = mmatic_zalloc(spi->mm, sizeof *ss);
 		ss->hl = tlist_create(NULL, spi->mm);
 		ss->ahl = tlist_create(NULL, spi->mm);
+		ss->aggstatus = aggregate ? SPI_AGG_READY : SPI_AGG_DISABLED;
+
 		thash_set(spi->subscribers, evname, ss);
 	}
 
 	/* append callback to appropriate subscriber list */
 	pf.func = cb;
 	tlist_push(to_ah ? ss->ahl : ss->hl, pf.ptr);
-
-	if (aggregate)
-		thash_set(spi->aggstatus, evname, (void *) SPI_AGG_READY);
-	else
-		thash_set(spi->aggstatus, evname, (void *) SPI_AGG_IGNORE);
 }
 
 void spi_subscribe(struct spi *spi, const char *evname, spi_event_cb_t *cb, bool aggregate)
@@ -370,7 +361,6 @@ void spi_free(struct spi *spi)
 
 	tlist_free(spi->trainqueue);
 	tlist_free(spi->traindata);
-	thash_free(spi->aggstatus);
 	thash_free(spi->subscribers);
 	thash_free(spi->flows);
 	thash_free(spi->eps);
@@ -381,7 +371,8 @@ void spi_free(struct spi *spi)
 
 bool spi_pending(struct spi *spi, const char *evname)
 {
-	return (((int) thash_get(spi->aggstatus, evname)) == SPI_AGG_PENDING);
+	struct spi_subscribers *ss = thash_get(spi->subscribers, evname);
+	return (ss && ss->aggstatus == SPI_AGG_PENDING);
 }
 
 void spi_train(struct spi *spi, struct spi_signature *sign)

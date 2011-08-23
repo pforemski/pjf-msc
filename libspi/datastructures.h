@@ -4,6 +4,8 @@
  * This software is licensed under GNU GPL version 3
  */
 
+/** @file */
+
 #ifndef _DATASTRUCTURES_H_
 #define _DATASTRUCTURES_H_
 
@@ -181,11 +183,7 @@ struct spi {
 	struct event_base *eb;              /** libevent root */
 	struct event *evgc;                 /** garbage collector event */
 
-	thash *subscribers;                 /** subscribers of spi events: thash of struct spi_subscriber*/
-	thash *aggstatus;                   /** thash of int aggregation status: see SPI_AGG_* */
-#define SPI_AGG_IGNORE  0
-#define SPI_AGG_READY   1
-#define SPI_AGG_PENDING 2
+	thash *subscribers;                 /** subscribers of spi events: thash of struct spi_subscribers*/
 
 	tlist *sources;                     /** traffic sources: list of struct spi_source */
 	thash *eps;                         /** endpoints: struct spi_ep indexed by file_fd-proto-epa */
@@ -210,6 +208,13 @@ union spi_ptr2eventcb_tool {
 struct spi_subscribers {
 	tlist *hl;                          /** handler list */
 	tlist *ahl;                         /** after handler list */
+
+	/** event aggregation status */
+	enum spi_aggstatus {
+		SPI_AGG_DISABLED = 0,
+		SPI_AGG_READY,
+		SPI_AGG_PENDING
+	} aggstatus;
 };
 
 /** spi event representation */

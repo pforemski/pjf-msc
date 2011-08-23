@@ -4,6 +4,8 @@
  * This software is licensed under GNU GPL version 3
  */
 
+/** @file */
+
 #ifndef _SPI_H_
 #define _SPI_H_
 
