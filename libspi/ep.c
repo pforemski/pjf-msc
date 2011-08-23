@@ -28,7 +28,7 @@ void ep_destroy(struct spi_ep *ep)
 	struct spi_stats *stats = &(source->spi->stats);
 
 	/* a testing endpoint: update performance metrics */
-	if (ep->testing && ep->predictions > 0) {
+	if (source->testing && ep->predictions > 0) {
 		stats->test_all++;
 		stats->test_is[source->label]++;
 
@@ -64,7 +64,6 @@ struct spi_ep *ep_new_pkt(struct spi_source *source, spi_epaddr_t epa,
 		ep->mm = mm;
 		ep->source = source;
 		ep->epa = epa;
-		ep->testing = source->testing;
 		thash_set(spi->eps, key, ep);
 
 		source->eps++;

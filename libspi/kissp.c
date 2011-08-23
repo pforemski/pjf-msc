@@ -410,19 +410,20 @@ static bool _predict(struct spi *spi, struct spi_signature *sign, struct spi_ep 
 static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 {
 	struct spi_ep *ep = data;
+	struct spi_source *source = ep->source;
 	struct spi_signature *sign;
 	int rc;
 
 	while (tlist_count(ep->pkts) >= spi->options.C) {
 		sign = _signature_compute_eat(spi, ep);
-		ep->source->signatures++;
+		source->signatures++;
 
 		/* if a learning source, submit as a training sample */
-		if (ep->source->label && !ep->testing) {
-			sign->label = ep->source->label;
+		if (source->label && !source->testing) {
+			sign->label = source->label;
 
 			spi_train(spi, sign);
-			ep->source->learned++;
+			source->learned++;
 			spi->stats.learned_pkt++;
 
 			ep->gclock = false;

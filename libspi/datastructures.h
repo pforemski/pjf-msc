@@ -111,8 +111,6 @@ struct spi_ep {
 	spi_label_t verdict;                /** current verdict */
 	double verdict_prob;                /** current verdict probability */
 	uint32_t verdict_count;             /** number of verdicts so far */
-
-	bool testing;                       /** endpoint for testing */
 	uint32_t predictions;               /** number of predictions made */
 
 	void *vdata;                        /** classifier verdict internal data */
