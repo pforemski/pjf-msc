@@ -35,12 +35,9 @@ static void _cr_dump(struct spi_classresult *cr, int num)
 	struct spi_ep *ep = cr->ep;
 	int i;
 
-	dbg(-1, "%s %-21s predicted as %d probs ",
-		spi_proto2a(ep->proto), spi_epa2a(ep->epa), cr->result);
-
+	dbg(-1, "%-21s predicted as %d probs ", spi_epa2a(ep->epa), cr->result);
 	for (i = 1; i < num; i++)
 		dbg(-1, "%.2f ", cr->cprob[i]);
-
 	dbg(-1, "  -> dist %g\n", _cprob_dist(cr->cprob));
 }
 

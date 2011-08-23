@@ -323,9 +323,8 @@ static bool _verdict_changed(struct spi *spi, const char *evname, void *arg)
 {
 	struct spi_ep *ep = arg;
 
-	printf("%s: %s %s is %s",
+	printf("%s: %s is %s",
 		spi_src2a(ep->source),
-		spi_proto2a(ep->proto),
 		spi_epa2a(ep->epa),
 		label_proto(ep->verdict));
 

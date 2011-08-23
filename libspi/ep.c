@@ -10,12 +10,12 @@
 #include "spi.h"
 #include "ep.h"
 
-static char *_k(struct spi_source *source, spi_proto_t proto, spi_epaddr_t epa)
+static char *_k(struct spi_source *source, spi_epaddr_t epa)
 {
-	static char key[] = "X-X-XXXxxxXXXxxxXXXXX";
-	snprintf(key, sizeof key, "%u-%u-%llu",
+	static char key[256];
+	snprintf(key, sizeof key, "%u-%llu",
 		(source->type == SPI_SOURCE_FILE) ? source->fd : 0,
-		proto, epa);
+		epa);
 	return key;
 }
 
@@ -38,16 +38,16 @@ void ep_destroy(struct spi_ep *ep)
 			stats->test_FN[source->label]++;
 			stats->test_FP[ep->verdict]++;
 
-			dbg(1, "%s: %s %s is %d but classified as %d\n",
-				spi_src2a(ep->source), spi_proto2a(ep->proto),
-				spi_epa2a(ep->epa), source->label, ep->verdict);
+			dbg(1, "%s: %s is %d but classified as %d\n",
+				spi_src2a(ep->source), spi_epa2a(ep->epa),
+				source->label, ep->verdict);
 		}
 	}
 
 	mmatic_free(ep->mm);
 }
 
-struct spi_ep *ep_new_pkt(struct spi_source *source, spi_proto_t proto, spi_epaddr_t epa,
+struct spi_ep *ep_new_pkt(struct spi_source *source, spi_epaddr_t epa,
 	const struct timeval *ts, void *data, uint32_t size)
 {
 	struct spi *spi = source->spi;
@@ -56,14 +56,13 @@ struct spi_ep *ep_new_pkt(struct spi_source *source, spi_proto_t proto, spi_epad
 	struct spi_pkt *pkt;
 	mmatic *mm;
 
-	key = _k(source, proto, epa);
+	key = _k(source, epa);
 	ep = thash_get(spi->eps, key);
 	if (!ep) {
 		mm = mmatic_create();
 		ep = mmatic_zalloc(mm, sizeof *ep);
 		ep->mm = mm;
 		ep->source = source;
-		ep->proto = proto;
 		ep->epa = epa;
 		ep->testing = source->testing;
 		thash_set(spi->eps, key, ep);

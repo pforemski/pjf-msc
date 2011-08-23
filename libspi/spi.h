@@ -44,6 +44,12 @@ int spi_add(struct spi *spi, spi_source_t type, spi_label_t label, bool test, co
  */
 int spi_loop(struct spi *spi);
 
+/** Request to break the main loop */
+void spi_stop(struct spi *spi);
+
+/** Free spi memory, close all resources, etc */
+void spi_free(struct spi *spi);
+
 /** Announce a spi event
  * @param evname     spi event name (referenced)
  * @param delay_ms   delay in miliseconds before delivering the event
@@ -64,43 +70,6 @@ void spi_subscribe_after(struct spi *spi, const char *evname, spi_event_cb_t *cb
 
 /** Check if spi event is pending for delivery */
 bool spi_pending(struct spi *spi, const char *evname);
-
-/** Stop spi main loop */
-void spi_stop(struct spi *spi);
-
-/** Free spi memory, close all resources, etc */
-void spi_free(struct spi *spi);
-
-/** Print endpoint address in human-readable format */
-static inline const char *spi_epa2a(spi_epaddr_t epa)
-{
-	static char buf[] = "111.111.111.111:11111";
-	struct in_addr addr;
-
-	addr.s_addr = epa >> 16;
-	snprintf(buf, sizeof buf, "%s:%u", inet_ntoa(addr), (uint16_t) epa);
-	return buf;
-}
-
-/** Print source information */
-static inline const char *spi_src2a(struct spi_source *src)
-{
-	char *n;
-
-	if (src->type == SPI_SOURCE_FILE) {
-		n = strrchr(src->as.file.path, '/');
-		if (n)
-			return n + 1;
-		else
-			return src->as.file.path;
-	} else if (src->type == SPI_SOURCE_SNIFF) {
-		return src->as.sniff.ifname;
-	}
-	return "?";
-}
-
-/** Print transport protocol name */
-#define spi_proto2a(p) (p == SPI_PROTO_UDP ? "UDP" : "TCP")
 
 /** Add given signature to training samples and schedule re-learning
  * @param sign                signature
@@ -131,5 +100,49 @@ double spi_stats_fp(struct spi *spi, spi_label_t label);
  * @retval -1.0    result not available
  */
 double spi_stats_fn(struct spi *spi, spi_label_t label);
+
+/* Utility functions */
+
+/** Extract endpoint protocol */
+#define spi_epa2proto(epa) ((spi_proto_t) (epa >> 48))
+
+/** Extract endpoint ip address */
+#define spi_epa2ip(epa) ((uint32_t) ((epa >> 16) & (0xffffffff)))
+
+/** Extract endpoint port number */
+#define spi_epa2port(epa) ((uint16_t) (epa & 0xffff))
+
+/** Print endpoint address in a human-readable format */
+static inline const char *spi_epa2a(spi_epaddr_t epa)
+{
+	static char buf[] = "AAA 111.111.111.111:11111";
+	struct in_addr addr;
+
+	addr.s_addr = spi_epa2ip(epa);
+	snprintf(buf, sizeof buf, "%s %s:%u",
+		spi_epa2proto(epa) == SPI_PROTO_UDP ? "UDP" : "TCP",
+		inet_ntoa(addr),
+		spi_epa2port(epa));
+
+	return buf;
+}
+
+/** Print source information */
+static inline const char *spi_src2a(struct spi_source *src)
+{
+	char *n;
+
+	if (src->type == SPI_SOURCE_FILE) {
+		n = strrchr(src->as.file.path, '/');
+		if (n)
+			return n + 1;
+		else
+			return src->as.file.path;
+	} else if (src->type == SPI_SOURCE_SNIFF) {
+		return src->as.sniff.ifname;
+	}
+	return "?";
+}
+
 
 #endif

@@ -25,7 +25,7 @@ typedef uint8_t spi_label_t;
 /** Table with classification probabilities */
 typedef double spi_cprob_t[SPI_LABEL_MAX + 1];
 
-/** Endpoint address (ip << 32 | port) */
+/** Endpoint address (proto << 48 | ip << 16 | port) */
 typedef uint64_t spi_epaddr_t;
 
 /** Protocol type */
@@ -60,7 +60,7 @@ struct spi_source {
 	int fd;                             /** underlying fd to monitor for read() possibility */
 	struct event *evread;               /** fd read event */
 	unsigned int counter;               /** packet counter */
-	unsigned int samples;               /** number of samples found */
+	unsigned int signatures;            /** number of extracted signatures */
 	unsigned int learned;               /** samples used for learning */
 	unsigned int eps;                   /** number of endpoints */
 
@@ -68,14 +68,14 @@ struct spi_source {
 
 	/** internal data depending on type */
 	union {
-		struct spi_source_file_t {
+		struct {
 			pcap_t *pcap;               /** libpcap handler */
 			const char *path;           /** file path */
 			struct timeval time;        /** virtual current time in file (time of last packet or inf.) */
 			struct timeval gctime;      /** virtual time of last garbage collector call */
 		} file;
 
-		struct spi_source_sniff_t {
+		struct {
 			pcap_t *pcap;               /** libpcap handler */
 			const char *ifname;         /** interface name */
 		} sniff;
@@ -102,7 +102,6 @@ struct spi_pkt {
 struct spi_ep {
 	mmatic *mm;                         /** mm for this endpoint */
 	struct spi_source *source;          /** source that created this endpoint */
-	spi_proto_t proto;                  /** protocol */
 	spi_epaddr_t epa;                   /** endpoint address */
 
 	struct timeval last;                /** time of last packet (for GC) */
@@ -132,7 +131,6 @@ struct spi_flow {
 	struct timeval last;                /** time of last packet (for GC) */
 
 	struct spi_source *source;          /** source that created this flow */
-	spi_proto_t proto;                  /** flow protocol */
 	spi_epaddr_t epa1;                  /** lower epaddr */
 	spi_epaddr_t epa2;                  /** greater epaddr */
 
@@ -186,8 +184,8 @@ struct spi {
 	thash *subscribers;                 /** subscribers of spi events: thash of struct spi_subscribers*/
 
 	tlist *sources;                     /** traffic sources: list of struct spi_source */
-	thash *eps;                         /** endpoints: struct spi_ep indexed by file_fd-proto-epa */
-	thash *flows;                       /** flows: struct spi_flow indexed by file_fd-proto-epa1-epa2 where epa1 < epa2 */
+	thash *eps;                         /** endpoints: struct spi_ep indexed by file_fd-epa */
+	thash *flows;                       /** flows: struct spi_flow indexed by file_fd-epa1-epa2 where epa1 < epa2 */
 
 	tlist *traindata;                   /** signatures for training: list of struct spi_signature */
 	tlist *trainqueue;                  /** signatures to be added to traindata */

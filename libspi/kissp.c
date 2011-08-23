@@ -365,7 +365,7 @@ static struct spi_signature *_signature_compute_eat(struct spi *spi, struct spi_
 
 		/* transmission protocol */
 		sign->c[i].index = i + 1;
-		sign->c[i].value = ep->proto;
+		sign->c[i].value = spi_epa2proto(ep->epa);
 		i++;
 
 		sign->c[i].index = -1;
@@ -375,7 +375,7 @@ static struct spi_signature *_signature_compute_eat(struct spi *spi, struct spi_
 	tlist_free(delays);
 
 	if (debug >= 5) {
-		dbg(-1, "%s %-21s ", spi_proto2a(ep->proto), spi_epa2a(ep->epa));
+		dbg(-1, "%-21s ", spi_epa2a(ep->epa));
 		for (i = 0; sign->c[i].index > 0; i++)
 			dbg(-1, "%.3f ", sign->c[i].value);
 		dbg(-1, "\n");
@@ -415,7 +415,7 @@ static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 
 	while (tlist_count(ep->pkts) >= spi->options.C) {
 		sign = _signature_compute_eat(spi, ep);
-		ep->source->samples++;
+		ep->source->signatures++;
 
 		/* if a learning source, submit as a training sample */
 		if (ep->source->label && !ep->testing) {

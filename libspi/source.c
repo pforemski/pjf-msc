@@ -21,10 +21,10 @@
 #include "ep.h"
 #include "flow.h"
 
-#define TCP_EPA_SRC(ip, tcp) (((uint64_t) (ip)->ip_src.s_addr << 16) | ntohs((tcp)->th_sport))
-#define TCP_EPA_DST(ip, tcp) (((uint64_t) (ip)->ip_dst.s_addr << 16) | ntohs((tcp)->th_dport))
-#define UDP_EPA_SRC(ip, tcp) (((uint64_t) (ip)->ip_src.s_addr << 16) | ntohs((udp)->uh_sport))
-#define UDP_EPA_DST(ip, tcp) (((uint64_t) (ip)->ip_dst.s_addr << 16) | ntohs((udp)->uh_dport))
+#define TCP_EPA_SRC(ip, tcp) (((uint64_t) SPI_PROTO_TCP << 48) | ((uint64_t) (ip)->ip_src.s_addr << 16) | ntohs((tcp)->th_sport))
+#define TCP_EPA_DST(ip, tcp) (((uint64_t) SPI_PROTO_TCP << 48) | ((uint64_t) (ip)->ip_dst.s_addr << 16) | ntohs((tcp)->th_dport))
+#define UDP_EPA_SRC(ip, udp) (((uint64_t) SPI_PROTO_UDP << 48) | ((uint64_t) (ip)->ip_src.s_addr << 16) | ntohs((udp)->uh_sport))
+#define UDP_EPA_DST(ip, udp) (((uint64_t) SPI_PROTO_UDP << 48) | ((uint64_t) (ip)->ip_dst.s_addr << 16) | ntohs((udp)->uh_dport))
 
 static int _pcap_err(pcap_t *pcap, const char *func, const char *id)
 {
@@ -59,11 +59,8 @@ static void _parse_new_packet(struct spi_source *source,
 	uint16_t iplen;
 	struct tcphdr *tcp;
 	struct udphdr *udp;
-
 	uint8_t *data;
-	spi_proto_t proto;
 	spi_epaddr_t src, dst;
-	int flowcounter;
 
 	/* Ethernet */
 	eth = (struct ether_header *) msg;
@@ -103,33 +100,39 @@ static void _parse_new_packet(struct spi_source *source,
 	switch (ip->ip_p) {
 		case IPPROTO_TCP:
 			tcp = (struct tcphdr *) (((uint8_t *) ip) + iplen);
-			if (!PTROK(tcp, sizeof *tcp)) {
-				dbg(8, "skipping too short TCP packet\n");
+			if (!PTROK(tcp, sizeof *tcp))
 				return;
-			}
 
-			proto = SPI_PROTO_TCP;
 			src = TCP_EPA_SRC(ip, tcp);
 			dst = TCP_EPA_DST(ip, tcp);
 
 			/* catch FIN/RST flags ASAP */
 			flow_tcp_flags(source, src, dst, tcp);
 
+			/* check if at least N bytes */
 			data = ((uint8_t *) tcp) + tcp->th_off * 4;
+			if (!PTROK(data, source->spi->options.N))
+				return;
+
+			/* enforce the P limit */
+			if (flow_count(source, src, dst, tstamp) > source->spi->options.P)
+				return;
+
 			break;
 
 		case IPPROTO_UDP:
 			udp = (struct udphdr *) (((uint8_t *) ip) + iplen);
-			if (!PTROK(udp, sizeof *udp)) {
-				dbg(8, "skipping too short UDP packet\n");
+			if (!PTROK(udp, sizeof *udp))
 				return;
-			}
 
-			proto = SPI_PROTO_UDP;
 			src = UDP_EPA_SRC(ip, udp);
 			dst = UDP_EPA_DST(ip, udp);
 
+			/* check if at least N bytes */
 			data = ((uint8_t *) udp) + sizeof *udp;
+			if (!PTROK(data, source->spi->options.N))
+				return;
+
 			break;
 
 		case IPPROTO_ICMP:
@@ -139,25 +142,9 @@ static void _parse_new_packet(struct spi_source *source,
 			return;
 	}
 
-	/* payload */
-	if (!PTROK(data, source->spi->options.N)) {
-		dbg(12, "skipping too short packet (need %u bytes of payload, pktlen=%u, msglen=%u)\n",
-			source->spi->options.N, pktlen, msglen);
-		return;
-	}
-
-	/* packet OK */
-	flowcounter = flow_count(source, proto, src, dst, tstamp);
-
-	if (proto == SPI_PROTO_TCP && flowcounter > source->spi->options.P) {
-		dbg(12, "skipping TCP packet past %u first packets of TCP flow\n",
-			source->spi->options.P);
-		return;
-	}
-
-	/* TODO: add at one endpoint? */
-	ep_new_pkt(source, proto, src, tstamp, data, pktlen);
-	ep_new_pkt(source, proto, dst, tstamp, data, pktlen);
+	/* XXX: add at both endpoints */
+	ep_new_pkt(source, src, tstamp, data, pktlen);
+	ep_new_pkt(source, dst, tstamp, data, pktlen);
 }
 
 static void _pcap_callback(u_char *arg, const struct pcap_pkthdr *msginfo, const u_char *msg)
@@ -281,7 +268,7 @@ void source_file_close(struct spi_source *source)
 
 	dbg(1, "pcap file %s finished and closed\n", source->as.file.path);
 	dbg(2, "  read %u packets, %u samples (learned %u), %u endpoints\n",
-		source->counter, source->samples, source->learned, source->eps);
+		source->counter, source->signatures, source->learned, source->eps);
 }
 
 /******/
@@ -329,5 +316,5 @@ void source_sniff_close(struct spi_source *source)
 
 	dbg(1, "sniff source %s finished and closed\n", source->as.sniff.ifname);
 	dbg(2, "  read %u packets, %u samples (learned %u), %u endpoints\n",
-		source->counter, source->samples, source->learned, source->eps);
+		source->counter, source->signatures, source->learned, source->eps);
 }
