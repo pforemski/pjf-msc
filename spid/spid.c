@@ -19,7 +19,7 @@ static void help(void)
 {
 	printf("Usage: spid [OPTIONS] [<traffic sources...>]\n");
 	printf("\n");
-	printf("  Statistical Packet Inspection daemon\n");
+	printf("  Statistical Packet Inspection\n");
 	printf("\n");
 	printf("Options:\n");
 	printf("  --learn=<lspec>  learn according to <lspec>, format:\n");
@@ -32,9 +32,7 @@ static void help(void)
 	printf("  --test=<lspec>   as --learn, but use the source for testing\n");
 	printf("  --testdb=<file>  as --learndb, but use all sources for testing\n");
 	printf("\n");
-	printf("  --kiss-std       use standard KISS algorithm without flow extensions\n");
-	printf("  --kiss-linear    use liblinear instead of libsvm\n");
-	printf("\n");
+	printf("  --kiss-std       use standard KISS algorithm (without flow extensions)\n");
 	printf("  --verdict-threshold=<t>\n");
 	printf("                   treat verdicts with probability below <t>%% as unknowns [%.0f]\n",
 		SPI_DEFAULT_VERDICT_THRESHOLD * 100);
@@ -213,7 +211,6 @@ static int parse_config(int argc, char *argv[])
 		{ "learndb",     1, NULL,  8 },
 		{ "signdb",      1, NULL,  9 },
 		{ "kiss-std",    0, NULL, 10 },
-		{ "kiss-linear", 0, NULL, 11 },
 		{ "verdict-ewma-len",  1, NULL, 12 },
 		{ "verdict-simple",    0, NULL, 13 },
 		{ "verdict-threshold", 1, NULL, 14 },
@@ -261,7 +258,6 @@ static int parse_config(int argc, char *argv[])
 					break;
 			case  9 : spid->options.signdb = mmatic_strdup(spid->mm, optarg); break;
 			case 10 : spid->spi_opts.kiss_std = true; break;
-			case 11 : spid->spi_opts.kiss_linear = true; break;
 			case 12 : spid->spi_opts.verdict_ewma_len = atoi(optarg); break;
 			case 13 : spid->spi_opts.verdict_simple = true; break;
 			case 14 : spid->spi_opts.verdict_threshold = ((double) atoi(optarg)) / 100.0; break;

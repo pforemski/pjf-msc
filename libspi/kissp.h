@@ -7,7 +7,6 @@
 #ifndef _KISSP_H_
 #define _KISSP_H_
 
-#include <linear.h> /* liblinear */
 #include <svm.h>
 
 #include "datastructures.h"
@@ -17,33 +16,20 @@
 
 /** Internal KISSP data */
 struct kissp {
-	int feature_num;         /** number of signature coordinates */
+	int feature_num;                 /** number of signature coordinates */
 
 	/** KISSP options */
 	struct {
-		bool pktstats;       /** use packet stats in signatures */
-		enum {
-			KISSP_LIBLINEAR,
-			KISSP_LIBSVM
-		} method;            /** classification method */
+		bool pktstats;               /** use packet stats in signatures */
 	} options;
 
-	/** per-method internal data */
-	union {
-		struct {
-			struct model *model;      /** liblinear model */
-			struct parameter params;  /** liblinear parameters */
-			int *labels;                  /** translation of svm->libspi labels */
-			int nr_class;                 /** number of classes */
-		} linear;
-
-		struct {
-			struct svm_model *model;      /** libsvm model */
-			struct svm_parameter params;  /** libsvm parameters */
-			int *labels;                  /** translation of svm->libspi labels */
-			int nr_class;                 /** number of classes */
-		} svm;
-	} as;
+	/** internal SVM data */
+	struct {
+		struct svm_model *model;      /** libsvm model */
+		struct svm_parameter params;  /** libsvm parameters */
+		int *labels;                  /** translation of svm->libspi labels */
+		int nr_class;                 /** number of classes */
+	} svm;
 };
 
 /** Initialize KISS+ classifier */

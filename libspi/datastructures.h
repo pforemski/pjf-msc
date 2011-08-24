@@ -145,8 +145,6 @@ struct spi_options {
 
 	/* KISS */
 	bool kiss_std;                      /** use KISS extensions */
-	bool kiss_linear;                   /** use liblinear instead of libsvm */
-	struct parameter *liblinear_params; /** liblinear params */
 	struct svm_parameter *libsvm_params;/** libsvm params */
 
 	/* verdict */

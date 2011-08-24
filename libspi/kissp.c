@@ -5,120 +5,12 @@
  */
 
 #include <math.h>
-#include <linear.h> /* liblinear */
 #include <svm.h>
 
 #include "datastructures.h"
 #include "spi.h"
 #include "kissp.h"
 #include "ep.h"
-
-/********** liblinear */
-static void _linear_print_func(const char *msg)
-{
-	while (*msg == '\n') msg++;
-	dbg(7, "liblinear: %s", msg);
-}
-
-static void _linear_init(struct spi *spi)
-{
-	struct kissp *kissp = spi->cdata;
-
-	if (spi->options.liblinear_params) {
-		memcpy(&kissp->as.linear.params, spi->options.liblinear_params, sizeof kissp->as.linear.params);
-	} else {
-		/* defaults */
-		kissp->as.linear.params.eps = 0.1;
-		kissp->as.linear.params.C = 1;
-		kissp->as.linear.params.nr_weight = 0;     /* NB: .weight_label and .weight not set */
-	}
-
-	/* ensure a logistic regression solver is chosen - it has probability info */
-	switch (kissp->as.linear.params.solver_type) {
-		case L2R_LR:
-		case L1R_LR:
-		case L2R_LR_DUAL:
-			break;
-		default:
-			kissp->as.linear.params.solver_type = L2R_LR_DUAL;
-			break;
-	}
-
-	kissp->as.linear.labels = mmatic_zalloc(spi->mm, sizeof(int) * SPI_LABEL_MAX);
-
-	set_print_string_function(_linear_print_func);
-}
-
-static void _linear_train(struct spi *spi)
-{
-	struct kissp *kissp = spi->cdata;
-	struct problem p;
-	struct spi_signature *s;
-	int i;
-	const char *err;
-
-	/* describe the problem */
-	p.l = tlist_count(spi->traindata);
-	p.n = kissp->feature_num;
-	p.x = mmatic_alloc(spi->mm, (sizeof (void *)) * p.l);
-	p.y = mmatic_alloc(spi->mm, (sizeof (int)) * p.l);
-	p.bias = -1.0;
-
-	i = 0;
-	tlist_iter_loop(spi->traindata, s) {
-		p.x[i] = (struct feature_node *) s->c;   /* NB: identical */
-		p.y[i] = s->label;
-		i++;
-	}
-
-	/* check */
-	err = check_parameter(&p, &kissp->as.linear.params);
-	if (err) {
-		dbg(1, "liblinear training failed: check_parameter(): %s\n", err);
-		return;
-	}
-
-	/* destroy previous model */
-	if (kissp->as.linear.model)
-		free_and_destroy_model(&kissp->as.linear.model);
-
-	/* run */
-	kissp->as.linear.model = train(&p, &kissp->as.linear.params);
-	kissp->as.linear.nr_class = get_nr_class(kissp->as.linear.model);
-	get_labels(kissp->as.linear.model, kissp->as.linear.labels);
-
-	dbg(5, "updated liblinear model, nr_class=%d, nr_feature=%d\n",
-		kissp->as.linear.nr_class,
-		kissp->as.linear.model->nr_feature);
-
-	spi_announce(spi, "classifierModelUpdated", 0, NULL, false);
-
-	mmatic_freeptr(p.x);
-	mmatic_freeptr(p.y);
-}
-
-static bool _linear_predict(struct spi *spi, struct spi_signature *sign, struct spi_ep *ep)
-{
-	struct kissp *kissp = spi->cdata;
-	struct spi_classresult *cr;
-	int i;
-
-	if (!kissp->as.linear.model) {
-		dbg(1, "cant classify: no model\n");
-		return false;
-	}
-
-	cr = mmatic_zalloc(spi->mm, sizeof *cr);
-	cr->ep = ep;
-	cr->result = predict_probability(kissp->as.linear.model, (struct feature_node *) sign->c, cr->cprob_lib);
-
-	/* rewrite from liblinear's to ours */
-	for (i = 0; i < kissp->as.linear.nr_class; i++)
-		cr->cprob[kissp->as.linear.labels[i]] = cr->cprob_lib[i];
-
-	spi_announce(spi, "endpointClassification", 0, cr, true);
-	return true;
-}
 
 /********** libsvm */
 static void _svm_print_func(const char *msg)
@@ -132,29 +24,29 @@ static void _svm_init(struct spi *spi)
 	struct kissp *kissp = spi->cdata;
 
 	if (spi->options.libsvm_params) {
-		memcpy(&kissp->as.svm.params, spi->options.libsvm_params, sizeof kissp->as.svm.params);
+		memcpy(&kissp->svm.params, spi->options.libsvm_params, sizeof kissp->svm.params);
 	} else {
 		/* defaults */
-		kissp->as.svm.params.kernel_type = RBF;
-		kissp->as.svm.params.gamma = 0.5; /* found by grid.py */
-		kissp->as.svm.params.C = 2.0; /* found by grid.py */
-		kissp->as.svm.params.eps = 0.1;
+		kissp->svm.params.kernel_type = RBF;
+		kissp->svm.params.gamma = 0.5; /* found by grid.py */
+		kissp->svm.params.C = 2.0; /* found by grid.py */
+		kissp->svm.params.eps = 0.1;
 
-		kissp->as.svm.params.nr_weight = 0;     /* NB: .weight_label and .weight not set */
-		kissp->as.svm.params.cache_size = 100;
-		kissp->as.svm.params.shrinking = 1;
+		kissp->svm.params.nr_weight = 0;     /* NB: .weight_label and .weight not set */
+		kissp->svm.params.cache_size = 100;
+		kissp->svm.params.shrinking = 1;
 	}
 
 	/* required options */
-	kissp->as.svm.params.svm_type = C_SVC;
-	kissp->as.svm.params.probability = 1; /* NB */
+	kissp->svm.params.svm_type = C_SVC;
+	kissp->svm.params.probability = 1; /* NB */
 
-	kissp->as.svm.labels = mmatic_zalloc(spi->mm, sizeof(int) * SPI_LABEL_MAX);
+	kissp->svm.labels = mmatic_zalloc(spi->mm, sizeof(int) * SPI_LABEL_MAX);
 
 	svm_set_print_string_function(_svm_print_func);
 }
 
-static void _svm_train(struct spi *spi)
+static bool _svm_train(struct spi *spi, const char *evname, void *data)
 {
 	struct kissp *kissp = spi->cdata;
 	struct svm_problem p;
@@ -175,27 +67,28 @@ static void _svm_train(struct spi *spi)
 	}
 
 	/* check */
-	err = svm_check_parameter(&p, &kissp->as.svm.params);
+	err = svm_check_parameter(&p, &kissp->svm.params);
 	if (err) {
 		dbg(1, "libsvm training failed: check_parameter(): %s\n", err);
-		return;
+		return true;
 	}
 
 	/* destroy previous model */
-	if (kissp->as.svm.model)
-		svm_free_and_destroy_model(&kissp->as.svm.model);
+	if (kissp->svm.model)
+		svm_free_and_destroy_model(&kissp->svm.model);
 
 	/* run */
-	kissp->as.svm.model = svm_train(&p, &kissp->as.svm.params);
-	kissp->as.svm.nr_class = svm_get_nr_class(kissp->as.svm.model);
-	svm_get_labels(kissp->as.svm.model, kissp->as.svm.labels);
+	kissp->svm.model = svm_train(&p, &kissp->svm.params);
+	kissp->svm.nr_class = svm_get_nr_class(kissp->svm.model);
+	svm_get_labels(kissp->svm.model, kissp->svm.labels);
 
-	dbg(5, "updated libsvm model, nr_class=%d\n", kissp->as.svm.nr_class);
-
+	dbg(5, "updated libsvm model, nr_class=%d\n", kissp->svm.nr_class);
 	spi_announce(spi, "classifierModelUpdated", 0, NULL, false);
 
 	mmatic_freeptr(p.x);
 	mmatic_freeptr(p.y);
+
+	return true;
 }
 
 static bool _svm_predict(struct spi *spi, struct spi_signature *sign, struct spi_ep *ep)
@@ -204,18 +97,18 @@ static bool _svm_predict(struct spi *spi, struct spi_signature *sign, struct spi
 	struct spi_classresult *cr;
 	int i;
 
-	if (!kissp->as.svm.model) {
+	if (!kissp->svm.model) {
 		dbg(1, "cant classify: no model\n");
 		return false;
 	}
 
 	cr = mmatic_zalloc(spi->mm, sizeof *cr);
 	cr->ep = ep;
-	cr->result = svm_predict_probability(kissp->as.svm.model, (struct svm_node *) sign->c, cr->cprob_lib);
+	cr->result = svm_predict_probability(kissp->svm.model, (struct svm_node *) sign->c, cr->cprob_lib);
 
 	/* rewrite from libsvm's to ours */
-	for (i = 0; i < kissp->as.svm.nr_class; i++)
-		cr->cprob[kissp->as.svm.labels[i]] = cr->cprob_lib[i];
+	for (i = 0; i < kissp->svm.nr_class; i++)
+		cr->cprob[kissp->svm.labels[i]] = cr->cprob_lib[i];
 
 	spi_announce(spi, "endpointClassification", 0, cr, true);
 	return true;
@@ -384,26 +277,6 @@ static struct spi_signature *_signature_compute_eat(struct spi *spi, struct spi_
 	return sign;
 }
 
-/** Make classification of given signature
- * @retval false   no classification result
- * @retval true    classification result issued
- */
-static bool _predict(struct spi *spi, struct spi_signature *sign, struct spi_ep *ep)
-{
-	struct kissp *kissp = spi->cdata;
-
-	switch (kissp->options.method) {
-		case KISSP_LIBLINEAR:
-			return _linear_predict(spi, sign, ep);
-			break;
-		case KISSP_LIBSVM:
-			return _svm_predict(spi, sign, ep);
-			break;
-	}
-
-	return false;
-}
-
 /********** event handlers */
 
 /** Receives "endpointPacketsReady */
@@ -429,7 +302,7 @@ static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 			ep->gclock = false;
 		} else {
 			/* make a prediction */
-			rc = _predict(spi, sign, ep);
+			rc = _svm_predict(spi, sign, ep);
 			ep->predictions++;
 
 			/* if no class. result - tag ep as gc-possible */
@@ -438,25 +311,6 @@ static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 
 			spi_signature_free(sign);
 		}
-	}
-
-	return true;
-}
-
-/** Receives "traindataUpdated" */
-static bool _train(struct spi *spi, const char *evname, void *data)
-{
-	struct kissp *kissp = spi->cdata;
-
-	dbg(2, "training with %u samples in traindata\n", tlist_count(spi->traindata));
-
-	switch (kissp->options.method) {
-		case KISSP_LIBLINEAR:
-			_linear_train(spi);
-			break;
-		case KISSP_LIBSVM:
-			_svm_train(spi);
-			break;
 	}
 
 	return true;
@@ -472,7 +326,7 @@ void kissp_init(struct spi *spi)
 	spi_subscribe(spi, "endpointPacketsReady", _ep_ready, false);
 
 	/* subscribe to new learning samples */
-	spi_subscribe(spi, "traindataUpdated", _train, true);
+	spi_subscribe(spi, "traindataUpdated", _svm_train, true);
 
 	/* KISS+ internal data */
 	kissp = mmatic_zalloc(spi->mm, sizeof *kissp);
@@ -487,13 +341,7 @@ void kissp_init(struct spi *spi)
 	}
 
 	/* initialize underlying classifier library */
-	if (spi->options.kiss_linear) {
-		kissp->options.method = KISSP_LIBLINEAR;
-		_linear_init(spi);
-	} else {
-		kissp->options.method = KISSP_LIBSVM;
-		_svm_init(spi);
-	}
+	_svm_init(spi);
 }
 
 void kissp_free(struct spi *spi)
