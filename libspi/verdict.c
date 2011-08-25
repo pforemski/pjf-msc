@@ -86,7 +86,7 @@ static void _ewma_verdict(struct spi *spi, struct spi_classresult *cr)
 	} else {
 		/* update EWMA */
 		for (i = 1; i <= SPI_LABEL_MAX; i++) {
-			ev->cprob[i] = EWMA(ev->cprob[i], cr->cprob[i], v->as.ewma.N);
+			ev->cprob[i] = EWMA(ev->cprob[i], cr->cprob[i], v->ewma.N);
 
 			/* collect info as _cprob_dist() */
 			if (ev->cprob[i] > m2) {
@@ -180,7 +180,7 @@ void verdict_init(struct spi *spi)
 		v->type = SPI_VERDICT_BEST;
 	} else {
 		v->type = SPI_VERDICT_EWMA;
-		v->as.ewma.N = spi->options.verdict_ewma_len ? spi->options.verdict_ewma_len : 5;
+		v->ewma.N = spi->options.verdict_ewma_len ? spi->options.verdict_ewma_len : 5;
 	}
 }
 

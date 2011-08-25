@@ -25,12 +25,10 @@ struct verdict {
 		SPI_VERDICT_BEST
 	} type;
 
-	/** type-dependent info */
-	union {
-		struct {
-			uint16_t N;   /** EWMA length */
-		} ewma;
-	} as;
+	/** ewma data */
+	struct {
+		uint16_t N;   /** EWMA length */
+	} ewma;
 };
 
 /** Initialize verdict issuer */
