@@ -378,36 +378,54 @@ static void _print_stats()
 	const char *proto;
 	struct spi *spi = spid->spi;
 	int ok, err, total;
-	double fp, fn;
-	double avg_fp = 0.0, avg_fn = 0.0;
+	double tp, fp, fn;
+	double avg_tp = -1.0, avg_fp = -1.0;
+	int avg_tp_c = 0, avg_fp_c = 0;
 	int count;
 
-	printf("Protocol statistics:\n");
+	printf("PROTOCOL STATISTICS:\n");
 	count = thash_count(spid->proto2label);
 	for (i = 2; i <= count; i++) {
 		proto = thash_uint_get(spid->label2proto, i);
 
-		fp = spi_stats_fp(spi, i);
 		fn = spi_stats_fn(spi, i);
+		if (fn >= 0.0) {
+			tp = 100.0 - fn;
+			if (avg_tp_c) {
+				avg_tp += (tp - avg_tp) / avg_tp_c++;
+			} else {
+				avg_tp = tp;
+				avg_tp_c = 2;
+			}
+		} else {
+			tp = -1.0;
+		}
 
-		avg_fp += (fp - avg_fp) / (i - 1);
-		avg_fn += (fn - avg_fn) / (i - 1);
+		fp = spi_stats_fp(spi, i);
+		if (fp >= 0.0) {
+			if (avg_fp_c) {
+				avg_fp += (fp - avg_fp) / avg_fp_c++;
+			} else {
+				avg_fp = fp;
+				avg_fp_c = 2;
+			}
+		}
 
-		printf("%15s FP %2.0f%% / FN %2.0f%% in %d\n",
-			proto, fp, fn, spi->stats.test_is[i]);
+		printf("%15s TP %2.0f%% / FP %2.0f%% in %d endpoints\n",
+			proto, tp, fp, spi->stats.test_is[i]);
 	}
-
-	printf("%15s FP %2.0f%% / FN %2.0f%%\n",
-		"average", avg_fp, avg_fn);
 
 	ok = spi->stats.test_ok;
 	total = spi->stats.test_all;
 	err = total - ok;
 
-	printf("Endpoint statistics:\n");
-	printf("%15s %4d (%2.0f%%)\n", "valid", ok, 100.0 * ok / total);
-	printf("%15s %4d (%2.0f%%)\n", "invalid", err, 100.0 * err / total);
-	printf("%15s %4d (%2.0f%%)\n", "total", total, 100.0);
+	printf("%15s TP %2.0f%% / FP %2.0f%% in total of %d endpoints\n",
+		"AVERAGE", avg_tp, avg_fp, total);
+
+	printf("ENDPOINT STATISTICS:\n");
+	printf("%15s %4d (%2.0f%%)\n", "valid", ok, total ? 100.0 * ok / total : -1.0);
+	printf("%15s %4d (%2.0f%%)\n", "invalid", err, total ? 100.0 * err / total : -1.0);
+	printf("%15s %4d\n", "TOTAL", total);
 }
 
 int main(int argc, char *argv[])
