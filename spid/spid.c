@@ -87,7 +87,7 @@ spi_label_t proto_label(const char *proto)
 
 	/* register */
 	if (label == 0) {
-		label = ++spid->label_count;
+		label = thash_count(spid->proto2label) + 1;
 		thash_set_uint(spid->proto2label, proto, label);
 		thash_uint_set(spid->label2proto, label, mmatic_strdup(spid->mm, proto));
 
@@ -380,9 +380,11 @@ static void _print_stats()
 	int ok, err, total;
 	double fp, fn;
 	double avg_fp = 0.0, avg_fn = 0.0;
+	int count;
 
 	printf("Protocol statistics:\n");
-	for (i = 2; i <= spid->label_count; i++) {
+	count = thash_count(spid->proto2label);
+	for (i = 2; i <= count; i++) {
 		proto = thash_uint_get(spid->label2proto, i);
 
 		fp = spi_stats_fp(spi, i);

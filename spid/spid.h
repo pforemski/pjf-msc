@@ -25,7 +25,6 @@ struct spid {
 
 	thash *proto2label;            /** protocol -> label dict */
 	thash *label2proto;            /** label -> proto dict */
-	spi_label_t label_count;       /** number of assigned labels */
 
 	tlist *learn;                  /** list of sources for learning */
 	tlist *detect;                 /** list of sources for detection */
