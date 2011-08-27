@@ -1,0 +1,10 @@
+PROTOCOL STATISTICS:
+           http TP 100% / FP  0% in 297 endpoints
+           iptv TP 100% / FP  0% in 140 endpoints
+          skype TP 100% / FP  0% in 3 endpoints
+            dns TP 100% / FP  0% in 1 endpoints
+        AVERAGE TP 100% / FP  0% in total of 441 endpoints
+ENDPOINT STATISTICS:
+          valid  441 (100%)
+        invalid    0 ( 0%)
+          TOTAL  441

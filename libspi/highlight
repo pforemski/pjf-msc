@@ -1,0 +1,14 @@
+#!/bin/bash
+
+DIR=hl
+rm -fr $DIR
+mkdir $DIR || exit 1
+
+for i in *.[ch]; do
+	echo "$i"
+	sed $i -re '/^\s*(\/| )\*/d; s|;\s*/\*.*|;|g; /^$/d' \
+		| source-highlight -s c -t 4 -d  > $DIR/$i.html
+#		| source-highlight -s c -t 4 -d --line-number=' ' > $DIR/$i.html
+done
+
+echo "Done"

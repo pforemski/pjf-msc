@@ -1,0 +1,521 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="297mm"
+   height="210mm"
+   id="svg3385"
+   version="1.1"
+   inkscape:version="0.48.1 r9760"
+   sodipodi:docname="architecture.svg"
+   inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/kiss.png"
+   inkscape:export-xdpi="68.419998"
+   inkscape:export-ydpi="68.419998">
+  <defs
+     id="defs3387">
+    <marker
+       inkscape:stockid="Arrow1Lend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Lend"
+       style="overflow:visible;">
+      <path
+         id="path4170"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt;marker-start:none;"
+         transform="scale(0.8) rotate(180) translate(12.5,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Lend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Lend-3"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path4170-6"
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt;marker-start:none"
+         transform="matrix(-0.8,0,0,-0.8,-10,0)" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow1Lend-3-6"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lend">
+      <path
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt;marker-start:none"
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         id="path4170-6-8"
+         inkscape:connector-curvature="0" />
+    </marker>
+    <marker
+       style="overflow:visible;"
+       id="Arrow1Lend-1"
+       refX="0.0"
+       refY="0.0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lend">
+      <path
+         transform="scale(0.8) rotate(180) translate(12.5,0)"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt;marker-start:none;"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         id="path4170-8" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Lend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Lend-5"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path4170-4"
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt;marker-start:none"
+         transform="matrix(-0.8,0,0,-0.8,-10,0)" />
+    </marker>
+  </defs>
+  <sodipodi:namedview
+     inkscape:document-units="mm"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.5"
+     inkscape:cx="525.34085"
+     inkscape:cy="346.24017"
+     inkscape:current-layer="layer1"
+     id="namedview3389"
+     showgrid="false"
+     inkscape:window-width="1024"
+     inkscape:window-height="715"
+     inkscape:window-x="1680"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata3391">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="opacity:0.96999995999999999;fill:none;stroke:#2b9731;stroke-width:1.41732283;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:2.83464567,2.83464567;stroke-dashoffset:0"
+       id="rect6209"
+       width="349.51929"
+       height="502.58783"
+       x="364.85629"
+       y="146.56039"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75" />
+    <text
+       xml:space="preserve"
+       style="font-size:34.53116608px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#0009ff;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="92.442543"
+       y="217.42609"
+       id="text4816-2-4-8-0"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="92.442543"
+         y="217.42609"
+         id="tspan8213-5">Traffic</tspan><tspan
+         sodipodi:role="line"
+         x="92.442543"
+         y="260.59006"
+         id="tspan4051">sources</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:34.53116608px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#0009ff;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="370.96576"
+       y="381.22559"
+       id="text4816-2-4-8-0-4"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="370.96576"
+         y="381.22559"
+         id="tspan4079">Endpoint</tspan><tspan
+         sodipodi:role="line"
+         x="370.96576"
+         y="424.38956"
+         id="tspan4083">table</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:34.53116608px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#0009ff;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="605.14178"
+       y="209.86597"
+       id="text4816-2-4-8-0-4-2"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="605.14178"
+         y="209.86597"
+         id="tspan4083-6">Feature</tspan><tspan
+         sodipodi:role="line"
+         x="605.14178"
+         y="253.02992"
+         id="tspan4111">extraction</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:34.53116608px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#0009ff;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="623.8764"
+       y="520.66101"
+       id="text4816-2-4-8-0-4-2-1"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="623.8764"
+         y="520.66101"
+         id="tspan4111-2">Decision</tspan><tspan
+         sodipodi:role="line"
+         x="623.8764"
+         y="563.82495"
+         id="tspan4139">process</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:34.53116608px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#0009ff;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="135.06143"
+       y="565.61542"
+       id="text4816-2-4-8-0-9"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="135.06143"
+         y="565.61542"
+         id="tspan4051-4">Classification</tspan><tspan
+         sodipodi:role="line"
+         x="135.06143"
+         y="608.77936"
+         id="tspan4167">results</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1.27452624;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-start:none;marker-end:url(#Arrow1Lend-5)"
+       d="m 173.12719,247.28144 c 84.90409,8.42756 118.35692,42.73224 151.59023,99.70366"
+       id="path4169"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1.27452624;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Lend-5)"
+       d="m 378.63879,357.15894 c 28.29379,-51.85741 67.52649,-95.26128 119.03395,-119.03395"
+       id="path4171"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1.27452624;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Lend-5)"
+       d="m 624.84576,291.02896 c 26.46321,68.88592 30.90906,140.26068 -2.03477,201.44207"
+       id="path4173"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1.27452624;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Lend-5)"
+       d="M 529.21165,562.67054 C 453.23073,567.83195 406.08482,507.39776 375.58664,450.75828"
+       id="path4175"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1.27452624;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Lend-5)"
+       d="m 346.08249,453.81043 c -5.9278,66.36659 -43.01974,145.83125 -121.06871,149.55548"
+       id="path4183"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75" />
+    <text
+       xml:space="preserve"
+       style="font-size:23.02077484px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#ff0000;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="241.40146"
+       y="303.9574"
+       id="text4816-2-4-8-0-3"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="241.40146"
+         y="303.9574"
+         id="tspan4051-1">packet</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:23.02077484px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#ff0000;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="421.42371"
+       y="250.93016"
+       id="text4816-2-4-8-0-3-4"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="421.42371"
+         y="250.93016"
+         id="tspan4051-1-3">window</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:23.02077484px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#ff0000;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="607.62543"
+       y="381.6579"
+       id="text4816-2-4-8-0-3-1"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="607.62543"
+         y="381.6579"
+         id="tspan4051-1-4">signature</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:23.02077484px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#ff0000;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="466.5675"
+       y="486.66339"
+       id="text4816-2-4-8-0-3-9"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="466.5675"
+         y="486.66339"
+         id="tspan4051-1-46">label</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:23.02077484px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#ff0000;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="277.34409"
+       y="495.75015"
+       id="text4816-2-4-8-0-3-9-0"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="277.34409"
+         y="495.75015"
+         id="tspan4051-1-46-6">label</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:23.02077484px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#2b9731;fill-opacity:0.96862745;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="694.97217"
+       y="622.00232"
+       id="text4816-2-4-8-0-3-4-5"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="694.97217"
+         y="622.00232"
+         id="tspan4051-1-3-1">KISS</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:34.53116608px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#0009ff;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="955.39246"
+       y="552.08954"
+       id="text4816-2-4-8-0-9-0"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="955.39246"
+         y="552.08954"
+         id="tspan4167-4">SVM</tspan><tspan
+         sodipodi:role="line"
+         x="955.39246"
+         y="595.25348"
+         id="tspan3059">model</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:34.53116608px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#0009ff;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="974.99249"
+       y="372.57178"
+       id="text4816-2-4-8-0-9-0-4"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="974.99249"
+         y="372.57178"
+         id="tspan3059-2">Training</tspan><tspan
+         sodipodi:role="line"
+         x="974.99249"
+         y="415.73575"
+         id="tspan3087">signatures</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:34.53116608px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#0009ff;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="980.88477"
+       y="172.51669"
+       id="text4816-2-4-8-0-9-0-4-9"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="980.88477"
+         y="172.51669"
+         id="tspan3087-8">Signature</tspan><tspan
+         sodipodi:role="line"
+         x="980.88477"
+         y="215.68065"
+         id="tspan4915">database</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1.19279337;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:4.77117324, 4.77117324;stroke-dashoffset:0;marker-end:url(#Arrow1Lend-5)"
+       d="m 690.38224,223.52657 c 74.50422,16.00372 114.68564,36.4012 167.4149,115.4951"
+       id="path3115"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1.19279337;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:2.38558662, 2.38558662;stroke-dashoffset:0;marker-start:none;marker-end:url(#Arrow1Lend-5)"
+       d="m 958.458,448.15923 c 1.74669,26.08356 0.37228,39.23774 -18.51467,77.5291"
+       id="path3117"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1.19279337;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Lend-5)"
+       d="M 871.57178,572.13102 C 808.85736,597.29798 738.67424,585.02714 687.20348,556.2372"
+       id="path3119"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1.19279337;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:3.57837993, 3.57837993;stroke-dashoffset:0;marker-end:url(#Arrow1Lend-5)"
+       d="m 981.28271,240.55165 c 0.66071,33.74737 -4.1699,61.17007 -23.8843,100.58919"
+       id="path3121"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75" />
+    <text
+       xml:space="preserve"
+       style="font-size:23.02077484px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#ff0000;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="775.33289"
+       y="282.20346"
+       id="text4816-2-4-8-0-3-1-6"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="775.33289"
+         y="282.20346"
+         id="tspan4051-1-4-4">signature</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:23.02077484px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#ff0000;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="924.88867"
+       y="461.70361"
+       id="text4816-2-4-8-0-3-1-4"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="924.88867"
+         y="461.70361"
+         id="tspan4051-1-4-2">signature</tspan><tspan
+         sodipodi:role="line"
+         x="924.88867"
+         y="490.47958"
+         id="tspan4346">set</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:23.02077484px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#ff0000;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="819.88141"
+       y="591.42639"
+       id="text4816-2-4-8-0-3-1-0"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="819.88141"
+         y="591.42639"
+         id="tspan4923">model</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:23.02077484px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;opacity:0.96999996;fill:#ff0000;fill-opacity:1;stroke:none;font-family:Century Schoolbook L;-inkscape-font-specification:Century Schoolbook L Italic"
+       x="953.47076"
+       y="260.33594"
+       id="text4816-2-4-8-0-3-1-9"
+       sodipodi:linespacing="125%"
+       transform="scale(0.97369126,1.0270196)"
+       inkscape:export-filename="/home/pjf/makro/mgr/polsl/thesis-svg/architecture.png"
+       inkscape:export-xdpi="75"
+       inkscape:export-ydpi="75"><tspan
+         sodipodi:role="line"
+         x="953.47076"
+         y="260.33594"
+         id="tspan4901">signature</tspan></text>
+  </g>
+</svg>

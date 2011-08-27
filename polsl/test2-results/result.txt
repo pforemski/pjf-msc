@@ -1,0 +1,13 @@
+PROTOCOL STATISTICS:
+          skype TP 100% / FP  0% in 3 endpoints
+        openvpn TP 75% / FP  0% in 8 endpoints
+            dns TP 100% / FP  0% in 1 endpoints
+           iptv TP 100% / FP  0% in 140 endpoints
+          https TP 100% / FP  0% in 19 endpoints
+           http TP 100% / FP  1% in 300 endpoints
+     bittorrent TP  0% / FP  0% in 1 endpoints
+        AVERAGE TP 82% / FP  0% in total of 472 endpoints
+ENDPOINT STATISTICS:
+          valid  469 (99%)
+        invalid    3 ( 1%)
+          TOTAL  472

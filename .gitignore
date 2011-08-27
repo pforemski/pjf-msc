@@ -8,6 +8,9 @@
 /spid/db.conf
 /spid/test/*.pcap
 /spid/test/*.txt
+/spid/test/signdb*
 /libspi/libsvm-*
 /libspi/liblinear-*
 /polsl/*.pdf
+/*/hl
+*.~lock*#
