@@ -258,7 +258,7 @@ static struct spi_signature *_signature_compute_eat(struct spi *spi, struct spi_
 
 		/* transmission protocol */
 		sign->c[i].index = i + 1;
-		sign->c[i].value = spi_epa2proto(ep->epa);
+		sign->c[i].value = ((double) spi_epa2proto(ep->epa) / 2.0);
 		i++;
 
 		sign->c[i].index = -1;
