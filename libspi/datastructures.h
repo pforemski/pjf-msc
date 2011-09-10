@@ -22,6 +22,8 @@ typedef uint8_t spi_label_t;
 /** Max value of spi_label_t */
 #define SPI_LABEL_MAX 255
 
+#define SPI_LABEL_UNKNOWN 1
+
 /** Table with classification probabilities */
 typedef double spi_cprob_t[SPI_LABEL_MAX + 1];
 

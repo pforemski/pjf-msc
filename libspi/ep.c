@@ -35,6 +35,9 @@ void ep_destroy(struct spi_ep *ep)
 		stats->test_is[source->label]++;
 		stats->test_signs[source->label] += ep->predictions;
 
+		if (ep->verdict == 0)
+			ep->verdict = SPI_LABEL_UNKNOWN;
+
 		if (ep->verdict == source->label) {
 			stats->test_ok++;
 			stats->test_ok_signs += ep->predictions;

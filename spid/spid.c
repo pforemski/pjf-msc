@@ -385,14 +385,14 @@ static void _print_stats()
 	count = thash_count(spid->proto2label);
 
 	printf("TESTING DATASET:\n");
-	for (i = 2; i <= count; i++) {
+	for (i = 1; i <= count; i++) {
 		proto = thash_uint_get(spid->label2proto, i);
 		printf("%15s %d endpoints (%d signatures)\n",
 			proto, spi->stats.test_is[i], spi->stats.test_signs[i]);
 	}
 
 	printf("ENDPOINT CLASSIFICATION PERFORMANCE:\n");
-	for (i = 2; i <= count; i++) {
+	for (i = 1; i <= count; i++) {
 		proto = thash_uint_get(spid->label2proto, i);
 
 		fn = spi_stats_fn(spi, i);
@@ -418,7 +418,7 @@ static void _print_stats()
 			}
 		}
 
-		printf("%15s TP %3.0f%% / FP %3.0f%%\n", proto, tp, fp);
+		printf("%15s TP %6.2f%% / FP %6.2f%%\n", proto, tp, fp);
 	}
 
 	ok = spi->stats.test_ok;

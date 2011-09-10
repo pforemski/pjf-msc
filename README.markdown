@@ -32,6 +32,8 @@ For future work
 ===============
 
 * libspi
+  * better handling of unknown protocols in performance stats
+  * better endpoint locking?
   * compute average size, IPT and jitter for both directions separately?
 * spid
   * sooner or later a real config file will be necessary :)
