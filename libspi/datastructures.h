@@ -106,7 +106,9 @@ struct spi_ep {
 
 	struct timeval last;                /** time of last packet (for GC) */
 	tlist *pkts;                        /** collected packets */
-	bool gclock;                        /** true if endpoint must not be wiped out by GC */
+	int gclock1;                        /** GC lock: C packets */
+	int gclock2;                        /** GC lock: new classification */
+	int gclock3;                        /** GC lock: verdict changed */
 
 	spi_label_t verdict;                /** current verdict */
 	double verdict_prob;                /** current verdict probability */
@@ -156,15 +158,20 @@ struct spi_options {
 
 /** Performance data */
 struct spi_stats {
-	uint32_t learned_pkt;                /** number of signatures learned from packet sources */
-	uint32_t learned_tq;                 /** number of signatures learned from training queues */
+	uint32_t learned_pkt;                    /** number of signatures learned from packet sources */
+	uint32_t learned_tq;                     /** number of signatures learned from training queues */
 
-	uint32_t test_all;                   /** total number of endpoints which provided a "test verdict" */
-	uint32_t test_is[SPI_LABEL_MAX + 1]; /** ...and number of such endpoints for each label */
+	uint32_t test_all;                      /** total number of endpoints which provided a "test verdict" */
+	uint32_t test_is[SPI_LABEL_MAX + 1];    /** ...and for each label */
 
-	uint32_t test_ok;                    /** total number of valid "test verdicts" */
-	uint32_t test_FN[SPI_LABEL_MAX + 1]; /** ...endpoint classification is a False Negative */
-	uint32_t test_FP[SPI_LABEL_MAX + 1]; /** ...endpoint classification is a False Positive */
+	uint32_t test_all_signs;                /** total number of signatures */
+	uint32_t test_signs[SPI_LABEL_MAX + 1]; /** ...and for each label */
+
+	uint32_t test_ok;                       /** total number of valid endpoint verdicts */
+	uint32_t test_ok_signs;                 /** ...and number of signatures */
+
+	uint32_t test_FN[SPI_LABEL_MAX + 1];    /** endpoint classification is a False Negative */
+	uint32_t test_FP[SPI_LABEL_MAX + 1];    /** endpoint classification is a False Positive */
 };
 
 /** Main data root */

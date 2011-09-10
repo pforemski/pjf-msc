@@ -122,6 +122,10 @@ static bool _verdict_new_classification(struct spi *spi, const char *evname, voi
 	/* store current classification verdict */
 	old_value = cr->ep->verdict;
 
+	// FIXME; delete
+	if (!ep->gclock2)
+		dbg(0, "%s: unlocked!\n", spi_epa2a(ep->epa));
+
 	/* update ep->verdict_prob and fetch new verdict value */
 	switch (v->type) {
 		case SPI_VERDICT_SIMPLE:
@@ -144,11 +148,11 @@ static bool _verdict_new_classification(struct spi *spi, const char *evname, voi
 	/* announce only if the verdict changed */
 	if (cr->ep->verdict != old_value) {
 		cr->ep->verdict_count++;
+		ep->gclock3++;
 		spi_announce(spi, "endpointVerdictChanged", 0, cr->ep, false);
-	} else {
-		ep->gclock = false;
 	}
 
+	ep->gclock2--;
 	return true;
 }
 
@@ -157,8 +161,7 @@ static bool _verdict_eaten(struct spi *spi, const char *evname, void *arg)
 	struct spi_ep *ep = arg;
 
 	/* information consumed by listener - mark endpoint as GC-possible */
-	ep->gclock = false;
-
+	ep->gclock3--;
 	return true;
 }
 

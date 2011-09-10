@@ -30,10 +30,14 @@ void ep_destroy(struct spi_ep *ep)
 	/* a testing endpoint: update performance metrics */
 	if (source->testing && ep->predictions > 0) {
 		stats->test_all++;
+		stats->test_all_signs += ep->predictions;
+
 		stats->test_is[source->label]++;
+		stats->test_signs[source->label] += ep->predictions;
 
 		if (ep->verdict == source->label) {
 			stats->test_ok++;
+			stats->test_ok_signs += ep->predictions;
 		} else {
 			stats->test_FN[source->label]++;
 			stats->test_FP[ep->verdict]++;
@@ -88,8 +92,8 @@ struct spi_ep *ep_new_pkt(struct spi_source *source, spi_epaddr_t epa,
 	tlist_push(ep->pkts, pkt);
 
 	/* generate event if pkts big enough */
-	if (!ep->gclock && tlist_count(ep->pkts) >= spi->options.C) {
-		ep->gclock = true;
+	if (ep->gclock1 == 0 && tlist_count(ep->pkts) >= spi->options.C) {
+		ep->gclock1++;
 		spi_announce(spi, "endpointPacketsReady", 0, ep, false);
 		dbg(7, "ep %s ready\n", spi_epa2a(epa));
 	}

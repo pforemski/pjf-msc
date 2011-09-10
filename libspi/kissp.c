@@ -110,7 +110,9 @@ static bool _svm_predict(struct spi *spi, struct spi_signature *sign, struct spi
 	for (i = 0; i < kissp->svm.nr_class; i++)
 		cr->cprob[kissp->svm.labels[i]] = cr->cprob_lib[i];
 
+	ep->gclock2++;
 	spi_announce(spi, "endpointClassification", 0, cr, true);
+
 	return true;
 }
 
@@ -285,7 +287,6 @@ static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 	struct spi_ep *ep = data;
 	struct spi_source *source = ep->source;
 	struct spi_signature *sign;
-	int rc;
 
 	while (tlist_count(ep->pkts) >= spi->options.C) {
 		sign = _signature_compute_eat(spi, ep);
@@ -298,21 +299,16 @@ static bool _ep_ready(struct spi *spi, const char *evname, void *data)
 			spi_train(spi, sign);
 			source->learned++;
 			spi->stats.learned_pkt++;
-
-			ep->gclock = false;
 		} else {
 			/* make a prediction */
-			rc = _svm_predict(spi, sign, ep);
-			ep->predictions++;
-
-			/* if no class. result - tag ep as gc-possible */
-			if (!rc)
-				ep->gclock = false;
+			if (_svm_predict(spi, sign, ep))
+				ep->predictions++;
 
 			spi_signature_free(sign);
 		}
 	}
 
+	ep->gclock1--;
 	return true;
 }
 

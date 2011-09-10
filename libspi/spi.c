@@ -82,7 +82,6 @@ static void _gc(int fd, short evtype, void *arg)
 	struct spi_ep *ep;
 	struct timeval systime;
 	uint32_t now;
-	int flows = 0, eps = 0;
 
 	gettimeofday(&systime, NULL);
 
@@ -101,16 +100,12 @@ static void _gc(int fd, short evtype, void *arg)
 
 		if (flow->last.tv_sec + SPI_FLOW_TIMEOUT < now)
 			thash_set(spi->flows, key, NULL);
-
-		flows++;
 	}
 
 	thash_iter_loop(spi->eps, key, ep) {
 		/* skip eps under use */
-		if (ep->gclock) {
-			eps++;
+		if (ep->gclock1 || ep->gclock2 || ep->gclock3)
 			continue;
-		}
 
 		if (ep->source->type == SPI_SOURCE_FILE)
 			now = ep->source->as.file.time.tv_sec;
@@ -119,8 +114,6 @@ static void _gc(int fd, short evtype, void *arg)
 
 		if (ep->last.tv_sec + SPI_EP_TIMEOUT < now)
 			thash_set(spi->eps, key, NULL);
-
-		eps++;
 	}
 }
 
@@ -269,6 +262,11 @@ int spi_loop(struct spi *spi)
 void spi_stop(struct spi *spi)
 {
 	spi->quitting = true;
+
+	/* close all flows and endpoints */
+	thash_flush(spi->flows);
+	thash_flush(spi->eps);
+
 	event_base_loopbreak(spi->eb);
 }
 

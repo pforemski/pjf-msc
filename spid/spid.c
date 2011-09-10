@@ -324,12 +324,10 @@ static bool _verdict_changed(struct spi *spi, const char *evname, void *arg)
 		spi_epa2a(ep->epa),
 		label_proto(ep->verdict));
 
-	if (spid->options.print_prob) {
-		printf( " %.0f %u\n",
-			ep->verdict_prob * 100.0, ep->verdict_count);
-	} else {
+	if (spid->options.print_prob)
+		printf( " %.0f %u\n", ep->verdict_prob * 100.0, ep->verdict_count);
+	else
 		printf("\n");
-	}
 
 	return true;
 }
@@ -377,14 +375,23 @@ static void _print_stats()
 	spi_label_t i;
 	const char *proto;
 	struct spi *spi = spid->spi;
-	int ok, err, total;
+	int ok, total;
+	int ok_signs, total_signs;
 	double tp, fp, fn;
 	double avg_tp = -1.0, avg_fp = -1.0;
 	int avg_tp_c = 0, avg_fp_c = 0;
 	int count;
 
-	printf("PROTOCOL STATISTICS:\n");
 	count = thash_count(spid->proto2label);
+
+	printf("TESTING DATASET:\n");
+	for (i = 2; i <= count; i++) {
+		proto = thash_uint_get(spid->label2proto, i);
+		printf("%15s %d endpoints (%d signatures)\n",
+			proto, spi->stats.test_is[i], spi->stats.test_signs[i]);
+	}
+
+	printf("ENDPOINT CLASSIFICATION PERFORMANCE:\n");
 	for (i = 2; i <= count; i++) {
 		proto = thash_uint_get(spid->label2proto, i);
 
@@ -411,21 +418,26 @@ static void _print_stats()
 			}
 		}
 
-		printf("%15s TP %2.0f%% / FP %2.0f%% in %d endpoints\n",
-			proto, tp, fp, spi->stats.test_is[i]);
+		printf("%15s TP %3.0f%% / FP %3.0f%%\n", proto, tp, fp);
 	}
 
 	ok = spi->stats.test_ok;
 	total = spi->stats.test_all;
-	err = total - ok;
 
-	printf("%15s TP %2.0f%% / FP %2.0f%% in total of %d endpoints\n",
-		"AVERAGE", avg_tp, avg_fp, total);
+	total_signs = spi->stats.test_all_signs;
+	ok_signs = spi->stats.test_ok_signs;
 
-	printf("ENDPOINT STATISTICS:\n");
-	printf("%15s %4d (%2.0f%%)\n", "valid", ok, total ? 100.0 * ok / total : -1.0);
-	printf("%15s %4d (%2.0f%%)\n", "invalid", err, total ? 100.0 * err / total : -1.0);
-	printf("%15s %4d\n", "TOTAL", total);
+	printf("PERFORMANCE SUMMARY:\n");
+	printf("%18s %6.2f%%\n", "average TP", avg_tp);
+	printf("%18s %6.2f%%\n", "average FP", avg_fp);
+
+	printf("%18s %d\n", "tested endpoints", total);
+	printf("%18s %d\n", "valid", ok);
+	printf("%18s %d\n", "invalid", total - ok);
+
+	printf("%18s %d\n", "tested signatures", total_signs);
+	printf("%18s %d\n", "valid", ok_signs);
+	printf("%18s %d\n", "invalid", total_signs - ok_signs);
 }
 
 int main(int argc, char *argv[])
