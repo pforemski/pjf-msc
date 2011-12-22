@@ -54,7 +54,7 @@ void spi_free(struct spi *spi);
  * @param evname     spi event name (referenced)
  * @param delay_ms   delay in miliseconds before delivering the event
  * @param arg        opaque data specific to given event
- * @param argfree    do mmatic_freeptr(arg) after event handling / ignoring
+ * @param argfree    do mmatic_free(arg) after event handling / ignoring
  */
 void spi_announce(struct spi *spi, const char *evname, uint32_t delay_ms, void *arg, bool argfree);
 

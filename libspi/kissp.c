@@ -85,8 +85,8 @@ static bool _svm_train(struct spi *spi, const char *evname, void *data)
 	dbg(5, "updated libsvm model, nr_class=%d\n", kissp->svm.nr_class);
 	spi_announce(spi, "classifierModelUpdated", 0, NULL, false);
 
-	mmatic_freeptr(p.x);
-	mmatic_freeptr(p.y);
+	mmatic_free(p.x);
+	mmatic_free(p.y);
 
 	return true;
 }
@@ -266,7 +266,7 @@ static struct spi_signature *_signature_compute_eat(struct spi *spi, struct spi_
 		sign->c[i].index = -1;
 	}
 
-	mmatic_freeptr(o);
+	mmatic_free(o);
 	tlist_free(delays);
 
 	if (debug >= 5) {
@@ -344,7 +344,7 @@ void kissp_free(struct spi *spi)
 {
 	struct kissp *kissp = spi->cdata;
 
-	mmatic_freeptr(kissp);
+	mmatic_free(kissp);
 	spi->cdata = NULL;
 }
 

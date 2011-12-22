@@ -51,7 +51,7 @@ void ep_destroy(struct spi_ep *ep)
 		}
 	}
 
-	mmatic_free(ep->mm);
+	mmatic_destroy(ep->mm);
 }
 
 struct spi_ep *ep_new_pkt(struct spi_source *source, spi_epaddr_t epa,
@@ -90,7 +90,7 @@ struct spi_ep *ep_new_pkt(struct spi_source *source, spi_epaddr_t epa,
 
 	/* store packet */
 	if (!ep->pkts)
-		ep->pkts = tlist_create(mmatic_freeptr, ep->mm);
+		ep->pkts = tlist_create(mmatic_free, ep->mm);
 
 	tlist_push(ep->pkts, pkt);
 

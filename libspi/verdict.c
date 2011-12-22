@@ -189,6 +189,6 @@ void verdict_init(struct spi *spi)
 
 void verdict_free(struct spi *spi)
 {
-	mmatic_freeptr(spi->vdata);
+	mmatic_free(spi->vdata);
 	return;
 }

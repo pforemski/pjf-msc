@@ -53,15 +53,15 @@ static void _subscriber_free(void *arg)
 
 	tlist_free(ss->hl);
 	tlist_free(ss->ahl);
-	mmatic_freeptr(ss);
+	mmatic_free(ss);
 }
 
 void spi_signature_free(void *arg)
 {
 	struct spi_signature *sign = arg;
 
-	mmatic_freeptr(sign->c);
-	mmatic_freeptr(sign);
+	mmatic_free(sign->c);
+	mmatic_free(sign);
 }
 
 /** Setup default options */
@@ -147,9 +147,9 @@ static void _new_spi_event(int fd, short evtype, void *arg)
 	}
 
 	if (se->argfree)
-		mmatic_freeptr(se->arg);
+		mmatic_free(se->arg);
 
-	mmatic_freeptr(se);
+	mmatic_free(se);
 }
 
 /*******************************/
@@ -308,7 +308,7 @@ void spi_announce(struct spi *spi, const char *evname, uint32_t delay_ms, void *
 	return;
 
 quit:
-	if (argfree) mmatic_freeptr(arg);
+	if (argfree) mmatic_free(arg);
 	return;
 }
 
@@ -364,7 +364,7 @@ void spi_free(struct spi *spi)
 	thash_free(spi->eps);
 	tlist_free(spi->sources);
 
-	mmatic_free(spi->mm);
+	mmatic_destroy(spi->mm);
 }
 
 bool spi_pending(struct spi *spi, const char *evname)

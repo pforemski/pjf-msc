@@ -72,8 +72,8 @@ static void version(void)
 
 static void free_source(struct source *src)
 {
-	mmatic_freeptr(src->proto);
-	mmatic_freeptr(src->cmd);
+	mmatic_free(src->proto);
+	mmatic_free(src->cmd);
 }
 
 spi_label_t proto_label(const char *proto)
@@ -450,7 +450,7 @@ int main(int argc, char *argv[])
 	spid = mmatic_zalloc(mm, sizeof *spid);
 	spid->mm = mm;
 	spid->proto2label = thash_create_strkey(NULL, mm);
-	spid->label2proto = thash_create_intkey(mmatic_freeptr, mm);
+	spid->label2proto = thash_create_intkey(mmatic_free, mm);
 	spid->learn = tlist_create(free_source, mm);
 	spid->detect = tlist_create(free_source, mm);
 
@@ -506,7 +506,7 @@ int main(int argc, char *argv[])
 		_print_stats();
 
 	spi_free(spid->spi);
-	mmatic_free(mm);
+	mmatic_destroy(mm);
 
 	return (rc != 2);
 }

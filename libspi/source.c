@@ -213,7 +213,7 @@ void source_close(struct spi_source *source)
 void source_destroy(struct spi_source *source)
 {
 	source_close(source);
-	mmatic_freeptr(source);
+	mmatic_free(source);
 }
 
 /******/

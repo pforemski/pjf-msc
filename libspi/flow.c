@@ -41,7 +41,7 @@ static inline void _set_flow(struct spi_source *source, spi_epaddr_t src, spi_ep
 
 void flow_destroy(struct spi_flow *flow)
 {
-	mmatic_freeptr(flow);
+	mmatic_free(flow);
 }
 
 void flow_tcp_flags(struct spi_source *source, spi_epaddr_t src, spi_epaddr_t dst, struct tcphdr *tcp)
