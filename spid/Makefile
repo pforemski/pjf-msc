@@ -1,5 +1,5 @@
 CFLAGS =
-LDFLAGS = -lspi
+LDFLAGS = -lspi -lpjf
 
 ME=spid
 C_OBJECTS=spid.o samplefile.o

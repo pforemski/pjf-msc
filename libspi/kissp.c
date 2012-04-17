@@ -5,7 +5,7 @@
  */
 
 #include <math.h>
-#include <svm.h>
+#include <libsvm/svm.h>
 
 #include "datastructures.h"
 #include "spi.h"

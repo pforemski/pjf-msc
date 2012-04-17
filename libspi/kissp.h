@@ -7,7 +7,7 @@
 #ifndef _KISSP_H_
 #define _KISSP_H_
 
-#include <svm.h>
+#include <libsvm/svm.h>
 
 #include "datastructures.h"
 
